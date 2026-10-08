@@ -29,11 +29,18 @@ button, input { font: inherit; }
 .acceso-beneficios li { color: #DCE6F4; font-size: 14px; padding-left: 22px; position: relative; }
 .acceso-beneficios li::before { content: ''; position: absolute; left: 0; top: 4px; width: 12px; height: 7px; border-left: 2.5px solid var(--orange); border-bottom: 2.5px solid var(--orange); transform: rotate(-45deg); }
 .acceso-hoja { flex: 1; background: #fff; border-radius: 24px 24px 0 0; padding: 26px 22px calc(32px + env(safe-area-inset-bottom, 0px)); }
+/* En el computador: la marca y el formulario juntos al centro, como una
+   tarjeta, en vez de estirarse a los bordes de la pantalla. */
+.acceso-cab > img { align-self: flex-start; width: auto; height: 34px; }
+.acceso-cab { display: flex; flex-direction: column; }
 @media (min-width: 900px) {
-  .acceso { flex-direction: row; align-items: stretch; }
-  .acceso-cab { flex: 1; padding: 64px 56px; max-width: 620px; display: flex; flex-direction: column; justify-content: center; }
+  .acceso { flex-direction: row; align-items: center; justify-content: center; gap: 64px; padding: 48px 32px; }
+  .acceso-cab { flex: 0 1 500px; padding: 0; }
   .acceso-cab h1 { font-size: 38px; }
-  .acceso-hoja { flex: 0 0 480px; border-radius: 0; padding: 56px 48px; display: flex; flex-direction: column; justify-content: center; overflow-y: auto; }
+  .acceso-hoja {
+    flex: 0 0 440px; border-radius: 20px; padding: 36px 36px 32px;
+    box-shadow: 0 24px 60px rgba(0,0,0,.28);
+  }
 }
 
 .pestanas, .segmento { display: grid; grid-template-columns: 1fr 1fr; background: var(--blue-soft); border-radius: 11px; padding: 3px; margin-bottom: 20px; }
