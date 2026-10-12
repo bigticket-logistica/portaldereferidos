@@ -10,7 +10,8 @@ import { supabase, mensajeError } from './supabase'
 import { Campo, Clave, Logo, CURP_RE, soloDigitos } from './comun'
 
 export default function Acceso({ recuperando, onListo, onRecuperando }) {
-  const [modo, setModo] = useState(recuperando ? 'nueva' : 'ingresar')
+  // Se abre en la inscripción, como la maqueta: la mayoría llega a inscribirse.
+  const [modo, setModo] = useState(recuperando ? 'nueva' : 'registro')
   // Al validar el código de recuperación se abre la sesión: ahí toca crear la
   // contraseña nueva, en esta misma pantalla.
   useEffect(() => { if (recuperando) setModo('nueva') }, [recuperando])
@@ -19,22 +20,12 @@ export default function Acceso({ recuperando, onListo, onRecuperando }) {
     <div className="acceso">
       <header className="acceso-cab">
         <Logo />
-        <h1>Gana hasta <span>$2,000</span> por cada transportista que recomiendes</h1>
-        <ol className="acceso-pasos">
-          <li><b>1</b> Crea tu cuenta y recibe tu código con su QR.</li>
-          <li><b>2</b> Compártelo con personas o empresas que puedan facturar.</li>
-          <li><b>3</b> Gana $500 cuando firmen y hagan su primera ruta, y $1,500 cuando completen 15 rutas en 30 días.</li>
-        </ol>
+        <h1>Presenta a un transportista y gana <span>$2,000</span></h1>
+        <p className="acceso-p">Por cada persona o empresa que facture y entre a rutear con Bigticket.</p>
       </header>
 
       <main className="acceso-hoja">
-        {modo !== 'nueva' && modo !== 'recuperar' && modo !== 'codigo' && (
-          <div className="pestanas" role="tablist">
-            <button role="tab" aria-selected={modo === 'ingresar'} className={modo === 'ingresar' ? 'on' : ''} onClick={() => setModo('ingresar')}>Ingresar</button>
-            <button role="tab" aria-selected={modo === 'registro'} className={modo === 'registro' ? 'on' : ''} onClick={() => setModo('registro')}>Crear cuenta</button>
-          </div>
-        )}
-        {modo === 'ingresar' && <Ingresar onOlvide={() => setModo('recuperar')} />}
+        {modo === 'ingresar' && <Ingresar onOlvide={() => setModo('recuperar')} onInscribirme={() => setModo('registro')} />}
         {modo === 'registro' && <Registro onYaTengo={() => setModo('ingresar')} />}
         {(modo === 'recuperar' || modo === 'codigo') && (
           <Recuperar paso={modo} setPaso={setModo} onRecuperando={onRecuperando} />
@@ -45,7 +36,7 @@ export default function Acceso({ recuperando, onListo, onRecuperando }) {
   )
 }
 
-function Ingresar({ onOlvide }) {
+function Ingresar({ onOlvide, onInscribirme }) {
   const [correo, setCorreo] = useState('')
   const [clave, setClave] = useState('')
   const [err, setErr] = useState('')
@@ -62,17 +53,20 @@ function Ingresar({ onOlvide }) {
 
   return (
     <form onSubmit={entrar} className="form">
+      <h2 className="form-t">Entra a tu cuenta</h2>
       {err && <div className="aviso error">{err}</div>}
-      <Campo label="Correo"><input type="email" value={correo} onChange={e => setCorreo(e.target.value)} autoComplete="email" placeholder="tucorreo@ejemplo.com" /></Campo>
+      <Campo label="Tu correo"><input type="email" value={correo} onChange={e => setCorreo(e.target.value)} autoComplete="email" placeholder="tucorreo@ejemplo.com" /></Campo>
       <Campo label="Contraseña"><Clave value={clave} onChange={setClave} placeholder="Tu contraseña" /></Campo>
-      <button className="btn" disabled={busy}>{busy ? 'Ingresando…' : 'Ingresar'}</button>
+      <button className="btn" disabled={busy}>{busy ? 'Entrando…' : 'Entrar'}</button>
       <button type="button" className="link" onClick={onOlvide}>¿Olvidaste tu contraseña?</button>
+      <div className="cambio-modo"><span>¿Todavía no estás inscrito?</span>
+        <button type="button" onClick={onInscribirme}>Inscríbete aquí ›</button></div>
     </form>
   )
 }
 
 function Registro({ onYaTengo }) {
-  const [d, setD] = useState({ nombre: '', curp: '', correo: '', telefono: '', clave: '', clave2: '', acepto: false })
+  const [d, setD] = useState({ nombre: '', curp: '', correo: '', telefono: '', clave: '', clave2: '' })
   const [err, setErr] = useState({})
   const [general, setGeneral] = useState('')
   const [busy, setBusy] = useState(false)
@@ -87,7 +81,6 @@ function Registro({ onYaTengo }) {
     if (soloDigitos(d.telefono).length !== 10) e.telefono = 'Son 10 dígitos, sin el 52.'
     if (d.clave.length < 8) e.clave = 'Mínimo 8 caracteres.'
     else if (d.clave !== d.clave2) e.clave2 = 'Las contraseñas no coinciden.'
-    if (!d.acepto) e.acepto = 'Para participar tienes que aceptar las condiciones.'
     setErr(e)
     return Object.keys(e).length === 0
   }
@@ -115,29 +108,35 @@ function Registro({ onYaTengo }) {
   if (enviado) return (
     <div className="form">
       <div className="aviso ok">Te enviamos un correo a <b>{d.correo.trim().toLowerCase()}</b>. Abre el enlace para confirmar tu cuenta y después ingresa con tu contraseña.</div>
-      <button className="btn sec" onClick={onYaTengo}>Ir a ingresar</button>
+      <button className="btn sec" onClick={onYaTengo}>Ir a entrar</button>
     </div>
   )
 
   return (
     <form onSubmit={crear} className="form" noValidate>
+      <h2 className="form-t">Inscríbete y recibe tu QR</h2>
       {general && <div className="aviso error">{general}</div>}
-      <Campo label="Nombre completo" error={err.nombre}><input value={d.nombre} onChange={e => S('nombre', e.target.value)} autoComplete="name" /></Campo>
-      <Campo label="CURP" error={err.curp}>
-        <input value={d.curp} onChange={e => S('curp', e.target.value.toUpperCase().replace(/\s/g, '').slice(0, 18))} autoCapitalize="characters" className="mono" />
+      <Campo label="Tu nombre" error={err.nombre}><input value={d.nombre} onChange={e => S('nombre', e.target.value)} autoComplete="name" placeholder="Nombre y apellido" /></Campo>
+      <Campo label="Tu WhatsApp" error={err.telefono}>
+        <input type="tel" inputMode="numeric" value={d.telefono} onChange={e => S('telefono', soloDigitos(e.target.value).slice(0, 10))} autoComplete="tel-national" placeholder="10 dígitos" />
       </Campo>
-      <Campo label="Correo" error={err.correo}><input type="email" value={d.correo} onChange={e => S('correo', e.target.value)} autoComplete="email" /></Campo>
-      <Campo label="Teléfono celular" error={err.telefono} ayuda="10 dígitos. Te contactaremos por WhatsApp.">
-        <input type="tel" inputMode="numeric" value={d.telefono} onChange={e => S('telefono', soloDigitos(e.target.value).slice(0, 10))} autoComplete="tel-national" />
+      <Campo label="Tu CURP" error={err.curp} ayuda="Con ella evitamos cuentas duplicadas.">
+        <input value={d.curp} onChange={e => S('curp', e.target.value.toUpperCase().replace(/\s/g, '').slice(0, 18))} autoCapitalize="characters" className="mono" placeholder="18 caracteres" />
       </Campo>
-      <Campo label="Contraseña" error={err.clave}><Clave value={d.clave} onChange={v => S('clave', v)} placeholder="Mínimo 8 caracteres" autoComplete="new-password" /></Campo>
-      <Campo label="Repite la contraseña" error={err.clave2}><Clave value={d.clave2} onChange={v => S('clave2', v)} autoComplete="new-password" /></Campo>
-      <label className={`check${err.acepto ? ' con-error' : ''}`}>
-        <input type="checkbox" checked={d.acepto} onChange={e => S('acepto', e.target.checked)} />
-        <span>Acepto las <a href="#condiciones" onClick={e => { e.preventDefault(); document.getElementById('condiciones')?.showModal() }}>condiciones del programa</a> y el tratamiento de mis datos. No soy trabajador de Bigticket.</span>
-      </label>
-      {err.acepto && <span className="campo-e">{err.acepto}</span>}
-      <button className="btn" disabled={busy}>{busy ? 'Creando tu cuenta…' : 'Crear cuenta'}</button>
+      <Campo label="Tu correo" error={err.correo}><input type="email" value={d.correo} onChange={e => S('correo', e.target.value)} autoComplete="email" placeholder="tucorreo@ejemplo.com" /></Campo>
+      <div className="dos">
+        <Campo label="Crea una contraseña" error={err.clave}><Clave value={d.clave} onChange={v => S('clave', v)} placeholder="Mínimo 8" autoComplete="new-password" /></Campo>
+        <Campo label="Repítela" error={err.clave2}><Clave value={d.clave2} onChange={v => S('clave2', v)} autoComplete="new-password" /></Campo>
+      </div>
+      <button className="btn" disabled={busy}>{busy ? 'Creando tu QR…' : 'Recibir mi QR'}</button>
+      <div className="cambio-modo"><span>¿Ya estás inscrito?</span>
+        <button type="button" onClick={onYaTengo}>Entra aquí ›</button></div>
+      <div className="nota-caja">
+        <span className="nota-i">i</span>
+        <span>No necesitas trabajar con Bigticket. Al inscribirte aceptas las{' '}
+          <a href="#condiciones" onClick={e => { e.preventDefault(); document.getElementById('condiciones')?.showModal() }}>reglas del programa</a>
+          {' '}y el uso de tus datos. No participa el personal de Bigticket.</span>
+      </div>
       <Condiciones />
     </form>
   )
