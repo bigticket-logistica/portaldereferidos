@@ -9,10 +9,6 @@ import QRCode from 'qrcode'
 import { supabase, mensajeError } from './supabase'
 import { Campo, Logo, CURP_RE, soloDigitos, pesos, fechaCorta } from './comun'
 
-const ESTADO_PREMIO = {
-  por_validar: { t: 'Por validar', c: 'amarillo' }, aprobado: { t: 'Aprobado', c: 'azul' },
-  pagado: { t: 'Pagado', c: 'verde' }, rechazado: { t: 'No procede', c: 'rojo' },
-}
 
 export default function Panel({ session }) {
   const [perfil, setPerfil] = useState(undefined)      // undefined: cargando · null: sin cuenta de referidor
@@ -21,6 +17,7 @@ export default function Panel({ session }) {
   const [error, setError] = useState('')
   const [vista, setVista] = useState('inicio')
   const [detalle, setDetalle] = useState(null)        // id del referido abierto
+  const [sub, setSub] = useState(null)                 // 'registrar' | 'reglas' dentro de Cuenta
 
   const cargar = useCallback(async () => {
     const { data: p } = await supabase.from('ref_referidores').select('*').eq('id', session.user.id).maybeSingle()
@@ -43,7 +40,11 @@ export default function Panel({ session }) {
   }, [session])
 
   useEffect(() => { cargar() }, [cargar])
-  const ir = (v) => { setVista(v); setDetalle(null); window.scrollTo(0, 0) }
+  const ir = (v) => {
+    // "registrar" y "reglas" son pantallas de Cuenta: se abren con su flecha de volver.
+    if (v === 'registrar' || v === 'reglas') { setVista('cuenta'); setSub(v) } else { setVista(v); setSub(null) }
+    setDetalle(null); window.scrollTo(0, 0)
+  }
   const abrir = (id) => { setVista('referidos'); setDetalle(id); window.scrollTo(0, 0) }
 
   if (perfil === undefined) return <div className="cargando"><span className="spin" /></div>
@@ -55,21 +56,24 @@ export default function Panel({ session }) {
 
   const avisos = armarAvisos(perfil, referidos || [], premios)
   const abierto = detalle ? (referidos || []).find(r => r.referido_id === detalle) : null
+  const SUBS = { registrar: ['Mi cuenta', 'Registra tu cuenta'], reglas: ['Programa de referidos', 'Reglas y ayuda'] }
+  const subT = vista === 'cuenta' && sub ? SUBS[sub] : null
+  const volver = () => { if (abierto) setDetalle(null); else setSub(null); window.scrollTo(0, 0) }
   const TITULOS = { qr: 'Mi QR personal', referidos: 'Mis referidos', pagos: 'Mis pagos', cuenta: 'Mi cuenta' }
 
   return (
     <div className="app">
       <header className="app-cab">
         <div className="app-cab-in">
-          {abierto && (
-            <button className="app-volver" onClick={() => { setDetalle(null); window.scrollTo(0, 0) }} aria-label="Volver a mis referidos">
+          {(abierto || subT) && (
+            <button className="app-volver" onClick={volver} aria-label="Volver">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
             </button>
           )}
-          {abierto ? (
+          {abierto || subT ? (
             <div className="app-cab-t">
-              <span className="app-saludo">Tu referido</span>
-              <span className="app-nombre">{corto(abierto)}</span>
+              <span className="app-saludo">{abierto ? 'Tu referido' : subT[0]}</span>
+              <span className="app-nombre">{abierto ? corto(abierto) : subT[1]}</span>
             </div>
           ) : (
           <div className="app-cab-t">
@@ -78,7 +82,7 @@ export default function Panel({ session }) {
           </div>
           )}
           {abierto && <span className={`pill blanco`}>{etapaDe(abierto).pill}</span>}
-          {!abierto && <button className="app-campana" onClick={() => ir('inicio')} aria-label={`Avisos: ${avisos.length}`}>
+          {!abierto && !subT && <button className="app-campana" onClick={() => ir('inicio')} aria-label={`Avisos: ${avisos.length}`}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0" />
             </svg>
@@ -101,13 +105,12 @@ export default function Panel({ session }) {
         {vista === 'qr' && <MiCodigo codigo={perfil.codigo} nombre={perfil.nombre} />}
         {vista === 'referidos' && !abierto && <MisReferidos referidos={referidos} onAbrir={abrir} />}
         {vista === 'referidos' && abierto && <Detalle r={abierto} premios={premios.filter(p => p.referido_id === abierto.referido_id)} />}
-        {vista === 'pagos' && <MisPremios premios={premios} nReferidos={(referidos || []).length} />}
-        {vista === 'cuenta' && (
-          <>
-            <DatosPago perfil={perfil} onGuardado={cargar} />
-            <button className="btn sec ancho" onClick={() => supabase.auth.signOut()}>Cerrar sesión</button>
-          </>
+        {vista === 'pagos' && <MisPagos perfil={perfil} referidos={referidos || []} premios={premios} ir={ir} />}
+        {vista === 'cuenta' && !sub && <MiCuenta perfil={perfil} ir={ir} />}
+        {vista === 'cuenta' && sub === 'registrar' && (
+          <RegistrarCuenta perfil={perfil} referidos={referidos || []} onGuardado={async () => { await cargar(); setSub(null); window.scrollTo(0, 0) }} />
         )}
+        {vista === 'cuenta' && sub === 'reglas' && <Reglas />}
       </main>
 
       <nav className="app-tabs" aria-label="Secciones">
@@ -141,7 +144,7 @@ const corto = (r) => { const [n, a] = String(r.nombre || r.razon_social || '').t
 function armarAvisos(perfil, referidos, premios) {
   const a = []
   const hayPremios = premios.some(p => p.estado !== 'rechazado')
-  if (hayPremios && !perfil.clabe) a.push({ tipo: 'atencion', t: 'Registra tu cuenta para cobrar tus bonos', ir: 'cuenta' })
+  if (hayPremios && !perfil.clabe) a.push({ tipo: 'atencion', t: 'Registra tu cuenta para cobrar tus bonos', ir: 'registrar' })
   for (const r of referidos) {
     if (r.etapa === 'firma_contrato') a.push({ tipo: 'avance', t: `${corto(r)}: firma de contrato`, ir: 'referidos' })
     else if (r.etapa === 'entrevista_alta') a.push({ tipo: 'avance', t: `${corto(r)}: entrevista y alta`, ir: 'referidos' })
@@ -248,32 +251,6 @@ function MiCodigo({ codigo, nombre }) {
         <span>Quien se postule con este QR o este link queda registrado a tu nombre. La invitación ya va escrita: solo eliges a quién mandarla.</span>
       </div>
     </>
-  )
-}
-
-// ── Premios ganados, por cobrar y pagados ───────────────────────────────────
-function MisPremios({ premios, nReferidos }) {
-  const validos = premios.filter(p => p.estado !== 'rechazado')
-  const suma = (xs) => xs.reduce((t, p) => t + Number(p.monto || 0), 0)
-  const ganado = suma(validos)
-  const pagado = suma(validos.filter(p => p.estado === 'pagado'))
-  const conPremio = new Set(validos.map(p => p.referido_id)).size
-  return (
-    <section className="tarjeta">
-      <span className="rotulo">Tus premios</span>
-      {/* La suma es de todos los referidos: se dice de cuántos, para que no se
-          lea como lo que paga uno solo (el máximo por referido es $2,000). */}
-      <p className="premios-de">
-        Suma de <b>{conPremio} {conPremio === 1 ? 'referido' : 'referidos'}</b> con premio
-        {nReferidos > conPremio && <> · {nReferidos} en total</>}
-      </p>
-      <div className="cifras">
-        <div><b>{pesos(ganado)}</b><span>Ganado</span></div>
-        <div><b className="naranja">{pesos(ganado - pagado)}</b><span>Por cobrar</span></div>
-        <div><b className="verde">{pesos(pagado)}</b><span>Pagado</span></div>
-      </div>
-      <p className="nota">Por <b>cada referido</b> ganas hasta <b>$2,000</b>: <b>$500</b> cuando firma su contrato y hace su primera ruta, y <b>$1,500</b> cuando completa 15 rutas en sus primeros 30 días. Cada premio lo valida Bigticket antes de pagarlo.</p>
-    </section>
   )
 }
 
@@ -386,31 +363,210 @@ function Detalle({ r, premios }) {
   )
 }
 
-// ── CLABE para recibir los premios ──────────────────────────────────────────
-function DatosPago({ perfil, onGuardado }) {
-  const [clabe, setClabe] = useState(perfil.clabe || '')
-  const [msg, setMsg] = useState('')
-  const [busy, setBusy] = useState(false)
-  const guardar = async (e) => {
-    e.preventDefault(); setMsg('')
-    if (soloDigitos(clabe).length !== 18) { setMsg('La CLABE tiene 18 dígitos.'); return }
-    setBusy(true)
-    const { error } = await supabase.rpc('fn_ref_guardar_clabe', { p_clabe: soloDigitos(clabe) })
-    setBusy(false)
-    if (error) { setMsg(mensajeError(error)); return }
-    setMsg('ok'); onGuardado()
+// ── Mis pagos ───────────────────────────────────────────────────────────────
+// Por venir: los bonos ganados que faltan por pagar y las metas en curso.
+// Depositados: los bonos ya pagados.
+function MisPagos({ perfil, referidos, premios, ir }) {
+  const validos = premios.filter(p => p.estado !== 'rechazado')
+  const suma = (xs) => xs.reduce((t, p) => t + Number(p.monto || 0), 0)
+  const pagados = validos.filter(p => p.estado === 'pagado').sort((a, b) => String(b.pagado_at).localeCompare(String(a.pagado_at)))
+  const ganados = validos.filter(p => p.estado !== 'pagado')
+  const nombreDe = (id) => { const r = referidos.find(x => x.referido_id === id); return r ? corto(r) : 'tu referido' }
+  const QUE = { firma_y_primera_ruta: 'Primera ruta de', quince_rutas_30_dias: '30 días de' }
+  const ESTADO = { por_validar: ['POR VALIDAR', 'gris'], aprobado: ['APROBADO', 'azul'] }
+
+  // Metas que todavía no se cumplen pero ya están en camino.
+  const enCurso = []
+  for (const r of referidos) {
+    const ya = (t) => validos.some(p => p.referido_id === r.referido_id && p.tramo === t)
+    if (r.etapa === 'contrato_firmado' && !ya('firma_y_primera_ruta')) {
+      enCurso.push({ k: r.referido_id + '1', t: `Primera ruta de ${corto(r)}`, d: 'Ya firmó: falta su primera ruta', m: 500 })
+    }
+    if (r.etapa === 'primera_ruta' && !ya('quince_rutas_30_dias')) {
+      const fin = new Date(new Date(r.primera_ruta + 'T12:00:00').getTime() + 29 * 86400000)
+      enCurso.push({ k: r.referido_id + '2', t: `30 días de ${corto(r)}`, d: `Va en ${r.rutas_30} de 15 rutas · plazo al ${fechaCorta(fin)}`, m: 1500 })
+    }
   }
+  const terminacion = perfil.clabe ? perfil.clabe.slice(-4) : null
+
   return (
-    <section className="tarjeta">
-      <span className="rotulo">Dónde recibes tus premios</span>
-      <form onSubmit={guardar} className="clabe-form">
-        <Campo label="CLABE interbancaria" ayuda="18 dígitos, a tu nombre.">
-          <input inputMode="numeric" className="mono" value={clabe} onChange={e => setClabe(soloDigitos(e.target.value).slice(0, 18))} />
-        </Campo>
-        <button className="btn sec" disabled={busy}>{busy ? 'Guardando…' : 'Guardar'}</button>
-      </form>
-      {msg && <div className={`aviso ${msg === 'ok' ? 'ok' : 'error'}`}>{msg === 'ok' ? 'CLABE guardada.' : msg}</div>}
-    </section>
+    <>
+      <span className="app-eyebrow">Resumen</span>
+      <section className="tarjeta resumen">
+        <div className="bonos-fecha"><b>{fechaCorta(new Date().toISOString())}</b> · al día de hoy</div>
+        <div className="resumen-dos">
+          <div><b>{pesos(suma(pagados))}</b><span>Depositado</span></div>
+          <div><b>{pesos(suma(ganados))}</b><span>Por cobrar</span></div>
+        </div>
+      </section>
+
+      {!perfil.clabe && suma(ganados) > 0 && (
+        <button className="aviso-cuenta" onClick={() => ir('registrar')}>
+          <b>Registra tu cuenta</b> para que podamos depositarte. Mientras tanto, tus bonos quedan guardados a tu nombre. ›
+        </button>
+      )}
+
+      {(ganados.length > 0 || enCurso.length > 0) && (
+        <>
+          <span className="app-eyebrow">Por venir</span>
+          <div className="tarjeta lista-pagos">
+            {ganados.map(p => (
+              <div key={p.id} className="pago">
+                <div className="pago-t"><b>{QUE[p.tramo]} {nombreDe(p.referido_id)}</b><span>Ganado el {fechaCorta(p.cumplido_at)} · se valida antes de pagarlo</span></div>
+                <div className="pago-m"><b>{pesos(p.monto)}</b><span className={`pill ${(ESTADO[p.estado] || ESTADO.por_validar)[1]}`}>{(ESTADO[p.estado] || ESTADO.por_validar)[0]}</span></div>
+              </div>
+            ))}
+            {enCurso.map(x => (
+              <div key={x.k} className="pago">
+                <div className="pago-t"><b>{x.t}</b><span>{x.d}</span></div>
+                <div className="pago-m"><b>{pesos(x.m)}</b><span className="pill naranja">EN CURSO</span></div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      <span className="app-eyebrow">Depositados</span>
+      {pagados.length === 0 ? (
+        <div className="tarjeta vacia"><span>Todavía no tienes depósitos. Aquí verás cada bono pagado.</span></div>
+      ) : (
+        <div className="tarjeta lista-pagos">
+          {pagados.map(p => (
+            <div key={p.id} className="pago">
+              <div className="pago-t">
+                <b>{QUE[p.tramo]} {nombreDe(p.referido_id)}</b>
+                <span>Depositado el {fechaCorta(p.pagado_at)}{terminacion ? ` · cuenta terminada en ${terminacion}` : ''}</span>
+              </div>
+              <div className="pago-m"><b>{pesos(p.monto)}</b><span className="pill verde">PAGADO</span></div>
+            </div>
+          ))}
+        </div>
+      )}
+      <p className="nota">Cada bono lo valida Bigticket antes de pagarlo. Si todavía no registras tu cuenta, el bono queda guardado a tu nombre.</p>
+    </>
+  )
+}
+
+// ── Mi cuenta ───────────────────────────────────────────────────────────────
+function MiCuenta({ perfil, ir }) {
+  const telefono = String(perfil.telefono || '').replace(/(\d{3})(\d{3})(\d{4})/, '$1 $2 $3')
+  return (
+    <>
+      <span className="app-eyebrow">Cuenta para depósitos</span>
+      {perfil.clabe ? (
+        <section className="tarjeta cuenta-caja">
+          <div className="cuenta-cab"><b>{perfil.banco || 'Cuenta bancaria'}</b><span className="pill verde">REGISTRADA</span></div>
+          <dl className="cuenta-datos">
+            <div><dt>CLABE</dt><dd>Terminada en {perfil.clabe.slice(-4)}</dd></div>
+            <div><dt>Titular</dt><dd>{perfil.titular || perfil.nombre}</dd></div>
+          </dl>
+          <button className="btn sec ancho" onClick={() => ir('registrar')}>Cambiar cuenta</button>
+        </section>
+      ) : (
+        <section className="tarjeta cuenta-caja">
+          <p className="nota">Todavía no registras una cuenta. La necesitamos para depositarte tus bonos.</p>
+          <button className="btn ancho" onClick={() => ir('registrar')}>Registrar mi cuenta</button>
+        </section>
+      )}
+      <div className="nota-caja"><span className="nota-i">i</span><span>Nunca te pediremos claves, NIP ni número de tarjeta.</span></div>
+
+      <span className="app-eyebrow">Mis datos</span>
+      <section className="tarjeta lista-datos">
+        <div><b>{perfil.nombre}</b><span>Inscrito desde el {fechaCorta(perfil.creado_at)}</span></div>
+        <div><b>{telefono}</b><span>Tu WhatsApp para los avisos</span></div>
+        <div><b>{perfil.correo}</b><span>Tu correo para ingresar</span></div>
+        <button className="fila-link" onClick={() => ir('reglas')}><span><b>Reglas y ayuda</b><span>Cómo se gana y cuándo se paga</span></span><em>›</em></button>
+      </section>
+      <button className="btn sec ancho" onClick={() => supabase.auth.signOut()}>Cerrar sesión</button>
+    </>
+  )
+}
+
+// Los tres primeros dígitos de la CLABE identifican al banco.
+const BANCOS = {
+  '002': 'Citibanamex', '012': 'BBVA México', '014': 'Santander', '021': 'HSBC', '030': 'BanBajío', '036': 'Inbursa',
+  '044': 'Scotiabank', '058': 'Banregio', '062': 'Afirme', '072': 'Banorte', '127': 'Banco Azteca', '137': 'BanCoppel',
+  '638': 'Nu México', '646': 'STP', '722': 'Mercado Pago',
+}
+// Dígito verificador de la CLABE (pesos 3, 7, 1): detecta errores de captura.
+function clabeValida(c) {
+  if (!/^\d{18}$/.test(c)) return false
+  const pesosV = [3, 7, 1]
+  const suma = c.slice(0, 17).split('').reduce((t, d, i) => t + ((Number(d) * pesosV[i % 3]) % 10), 0)
+  return (10 - (suma % 10)) % 10 === Number(c[17])
+}
+
+// ── Registrar o cambiar la cuenta ───────────────────────────────────────────
+function RegistrarCuenta({ perfil, referidos, onGuardado }) {
+  const [clabe, setClabe] = useState('')
+  const [banco, setBanco] = useState(perfil.banco || '')
+  const [titular, setTitular] = useState(perfil.titular || perfil.nombre || '')
+  const [acepto, setAcepto] = useState(false)
+  const [err, setErr] = useState('')
+  const [busy, setBusy] = useState(false)
+  const firmo = referidos.find(r => r.etapa === 'contrato_firmado')
+
+  const cambiarClabe = (v) => {
+    const c = soloDigitos(v).slice(0, 18)
+    setClabe(c)
+    if (c.length >= 3 && BANCOS[c.slice(0, 3)]) setBanco(BANCOS[c.slice(0, 3)])
+  }
+  const guardar = async (e) => {
+    e.preventDefault(); setErr('')
+    if (!clabeValida(clabe)) { setErr('Revisa la CLABE: son 18 dígitos y alguno no coincide.'); return }
+    if (banco.trim().length < 2) { setErr('Escribe el banco.'); return }
+    if (titular.trim().split(/\s+/).length < 2) { setErr('Escribe el nombre completo del titular.'); return }
+    if (!acepto) { setErr('Para guardar acepta el aviso de privacidad.'); return }
+    setBusy(true)
+    const { error } = await supabase.rpc('fn_ref_guardar_cuenta', { p_clabe: clabe, p_banco: banco.trim(), p_titular: titular.trim() })
+    setBusy(false)
+    if (error) { setErr(mensajeError(error)); return }
+    alert('✅ Cuenta guardada.')
+    onGuardado()
+  }
+
+  return (
+    <form onSubmit={guardar} className="form registrar">
+      <p className="form-p">
+        {firmo ? <><b>{corto(firmo)}</b> ya firmó su contrato. Registra tu cuenta para depositarte tus $500 apenas haga su primera ruta.</>
+          : 'Registra la cuenta donde quieres recibir tus bonos.'}
+      </p>
+      {err && <div className="aviso error">{err}</div>}
+      <Campo label="CLABE interbancaria" ayuda="Está en la app de tu banco o en tu estado de cuenta.">
+        <input inputMode="numeric" className="mono" value={clabe} onChange={e => cambiarClabe(e.target.value)} placeholder="18 dígitos" />
+      </Campo>
+      <Campo label="Banco"><input value={banco} onChange={e => setBanco(e.target.value)} /></Campo>
+      <Campo label="Nombre del titular" ayuda="La cuenta debe estar a tu nombre."><input value={titular} onChange={e => setTitular(e.target.value)} /></Campo>
+      <label className="check">
+        <input type="checkbox" checked={acepto} onChange={e => setAcepto(e.target.checked)} />
+        <span>Acepto el aviso de privacidad.</span>
+      </label>
+      <button className="btn" disabled={busy}>{busy ? 'Guardando…' : 'Guardar mi cuenta'}</button>
+      <p className="nota" style={{ textAlign: 'center' }}>Nunca te pediremos claves, NIP ni número de tarjeta.</p>
+    </form>
+  )
+}
+
+// ── Reglas y ayuda ──────────────────────────────────────────────────────────
+function Reglas() {
+  return (
+    <>
+      <span className="app-eyebrow">Cuánto ganas</span>
+      <section className="tarjeta ganas">
+        <div><b>$500</b><span>cuando tu referido firma su contrato y hace su primera ruta</span></div>
+        <div><b>$1,500</b><span>cuando completa 15 rutas en los 30 días siguientes a su primera ruta</span></div>
+      </section>
+      <span className="app-eyebrow">Las reglas</span>
+      <ol className="tarjeta reglas">
+        <li>Cualquier persona puede referir, trabaje o no con Bigticket. No participa el personal de Bigticket.</li>
+        <li>Tu referido debe poder facturar, como empresa o como persona física con actividad empresarial, y no trabajar hoy con Bigticket.</li>
+        <li>Tiene que postularse con tu QR o tu link. Si dos personas refieren al mismo RFC, gana la primera postulación.</li>
+        <li>Los 30 días se cuentan desde su primera ruta. Las rutas que suman son las pagadas.</li>
+        <li>El depósito va a una cuenta a tu nombre, y cada bono lo valida Bigticket antes de pagarlo.</li>
+        <li>No hay tope: puedes referir a todas las personas que quieras.</li>
+      </ol>
+      <a className="btn sec ancho" href="mailto:comunicados@bigticket.mx?subject=Programa%20de%20referidos">¿Dudas? Escríbenos</a>
+    </>
   )
 }
 
