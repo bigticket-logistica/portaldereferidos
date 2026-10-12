@@ -224,3 +224,54 @@ button, input { font: inherit; }
 .doc-t em { font-style: normal; font-weight: 400; color: var(--muted); }
 .doc-e { font-size: 11.5px; color: var(--muted); }
 .doc.con-error .doc-e { color: var(--red); }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   App del referidor (maqueta "App Referidos"): cabecera azul, cuerpo gris y
+   barra de cinco pestañas abajo, como el portal de terceros en el teléfono.
+   ═══════════════════════════════════════════════════════════════════════════ */
+.app { min-height: 100vh; background: var(--page); padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
+.app-cab { background: linear-gradient(160deg, #2B558F, var(--navy) 45%, var(--navy-deep)); color: #fff; padding: calc(14px + env(safe-area-inset-top, 0px)) 16px 14px; }
+.app-cab-in { max-width: 640px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.app-cab-t { min-width: 0; display: flex; flex-direction: column; }
+.app-saludo { font-size: 13px; color: #9FB6D8; }
+.app-nombre { font-family: var(--font-display); font-weight: 700; font-size: 19px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.app-campana { position: relative; width: 40px; height: 40px; border: none; border-radius: 12px; background: rgba(255,255,255,.12); display: grid; place-items: center; cursor: pointer; flex-shrink: 0; }
+.app-badge { position: absolute; top: -6px; right: -6px; min-width: 14px; height: 18px; padding: 0 5px; line-height: 18px; border-radius: 999px; background: var(--orange); color: #fff; font-family: var(--font-display); font-weight: 800; font-size: 11px; border: 2px solid var(--navy); box-sizing: content-box; text-align: center; }
+.app-banda { max-width: 640px; width: 100%; margin: 12px auto 0; display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid rgba(255,255,255,.18); border-radius: 10px; background: rgba(255,255,255,.08); color: #fff; font: inherit; font-size: 14px; cursor: pointer; text-align: left; }
+.app-banda span { flex: 1; }
+.app-banda em { font-style: normal; font-family: var(--font-display); font-weight: 700; color: #FFB27A; font-size: 13.5px; }
+.app-cuerpo { max-width: 640px; margin: 0 auto; padding: 4px 16px 24px; display: flex; flex-direction: column; gap: 12px; }
+.app-eyebrow { font-family: var(--font-display); font-weight: 700; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 12px 2px -4px; }
+
+.avisos { background: #fff; border-radius: 16px; overflow: hidden; box-shadow: var(--sombra); }
+.aviso-fila { width: 100%; display: flex; align-items: center; gap: 10px; padding: 13px 14px; border: none; background: none; cursor: pointer; text-align: left; font: inherit; }
+.aviso-fila + .aviso-fila { border-top: 1px solid #F0F1F3; }
+.aviso-tag { width: 7.6em; padding: 4px 0; text-align: center; border-radius: 999px; color: #fff; font-family: var(--font-display); font-weight: 800; font-size: 10.5px; letter-spacing: .05em; flex-shrink: 0; }
+.aviso-tag.atencion { background: var(--orange); }
+.aviso-tag.avance { background: var(--navy); }
+.aviso-t { flex: 1; min-width: 0; font-family: var(--font-display); font-weight: 700; font-size: 14px; color: var(--navy); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.aviso-f { color: var(--muted); font-size: 20px; line-height: 1; }
+
+.bonos { padding: 16px; }
+.bonos-fecha { text-align: center; font-size: 13px; color: var(--muted); }
+.bonos-fecha b { color: var(--navy); font-family: var(--font-display); }
+.bonos-montos { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-top: 8px; }
+.bonos-grande { font-family: var(--font-display); font-weight: 800; font-size: 38px; letter-spacing: -1px; color: var(--navy); }
+.bonos-cobrar { font-size: 13.5px; color: var(--muted); }
+.bonos-cobrar b { font-family: var(--font-display); font-size: 17px; color: var(--navy); }
+.cifras.cuatro { grid-template-columns: repeat(4, 1fr); }
+.cifras.cuatro b { font-size: 18px; }
+.cifras.cuatro span { font-size: 11px; }
+.link-fuerte { display: block; margin: 2px auto 0; border: none; background: none; color: var(--navy); font-family: var(--font-display); font-weight: 700; font-size: 14px; cursor: pointer; padding: 6px; }
+.cta { display: flex; align-items: center; justify-content: space-between; gap: 14px; background: var(--navy); color: #fff; border-radius: 16px; padding: 16px; }
+.cta b { font-family: var(--font-display); font-size: 15px; line-height: 1.3; }
+.cta .btn { flex-shrink: 0; height: 44px; padding: 0 16px; font-size: 14px; }
+.btn.ancho { width: 100%; }
+
+.app-tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: grid; grid-template-columns: repeat(5, 1fr); background: rgba(255,255,255,.97); backdrop-filter: blur(8px); border-top: 1px solid var(--line); padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px)); }
+.app-tab { position: relative; display: flex; flex-direction: column; align-items: center; gap: 3px; border: none; background: none; cursor: pointer; padding: 4px 0; font-family: var(--font-display); font-weight: 600; font-size: 11.5px; color: #8B8B8B; }
+.app-tab-ico { width: 54px; height: 30px; border-radius: 999px; display: grid; place-items: center; transition: background .18s ease; }
+.app-tab.on { color: var(--navy); font-weight: 800; }
+.app-tab.on .app-tab-ico { background: #DCE6F4; }
+.app-tab.on::before { content: ''; position: absolute; top: -6px; left: 50%; width: 28px; margin-left: -14px; height: 3px; border-radius: 0 0 3px 3px; background: var(--navy); }
+@media (min-width: 900px) { .app-tabs { left: 50%; right: auto; width: 640px; margin-left: -320px; border-radius: 16px 16px 0 0; border: 1px solid var(--line); } }

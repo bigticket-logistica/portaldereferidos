@@ -40,6 +40,7 @@ export default function Panel({ session }) {
   const [referidos, setReferidos] = useState(null)
   const [premios, setPremios] = useState([])
   const [error, setError] = useState('')
+  const [vista, setVista] = useState('inicio')
 
   const cargar = useCallback(async () => {
     const { data: p } = await supabase.from('ref_referidores').select('*').eq('id', session.user.id).maybeSingle()
@@ -62,33 +63,147 @@ export default function Panel({ session }) {
   }, [session])
 
   useEffect(() => { cargar() }, [cargar])
-
-  const salir = () => supabase.auth.signOut()
+  const ir = (v) => { setVista(v); window.scrollTo(0, 0) }
 
   if (perfil === undefined) return <div className="cargando"><span className="spin" /></div>
+  if (perfil === null) return (
+    <div className="panel">
+      <main className="panel-cuerpo"><CompletarCuenta error={error} onListo={cargar} /></main>
+    </div>
+  )
+
+  const avisos = armarAvisos(perfil, referidos || [], premios)
+  const TITULOS = { qr: 'Mi QR personal', referidos: 'Mis referidos', pagos: 'Mis pagos', cuenta: 'Mi cuenta' }
 
   return (
-    <div className="panel">
-      <header className="panel-cab">
-        <div className="panel-cab-in">
-          <Logo alto={26} />
-          <button className="salir" onClick={salir}>Salir</button>
+    <div className="app">
+      <header className="app-cab">
+        <div className="app-cab-in">
+          <div className="app-cab-t">
+            <span className="app-saludo">{vista === 'inicio' ? 'Hola,' : perfil.nombre}</span>
+            <span className="app-nombre">{vista === 'inicio' ? perfil.nombre.toUpperCase() : TITULOS[vista]}</span>
+          </div>
+          <button className="app-campana" onClick={() => ir('inicio')} aria-label={`Avisos: ${avisos.length}`}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0" />
+            </svg>
+            {avisos.length > 0 && <span className="app-badge">{avisos.length}</span>}
+          </button>
         </div>
+        {vista === 'inicio' && (
+          <button className="app-banda" onClick={() => ir('qr')}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" aria-hidden="true">
+              <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 17h4v4" />
+            </svg>
+            <span><b>Tu QR</b> está activo</span>
+            <em>Compartir ›</em>
+          </button>
+        )}
       </header>
-      <main className="panel-cuerpo">
-        {perfil === null ? (
-          <CompletarCuenta error={error} onListo={cargar} />
-        ) : (
+
+      <main className="app-cuerpo">
+        {vista === 'inicio' && <Inicio perfil={perfil} referidos={referidos} premios={premios} avisos={avisos} ir={ir} />}
+        {vista === 'qr' && <MiCodigo codigo={perfil.codigo} />}
+        {vista === 'referidos' && <MisReferidos referidos={referidos} premios={premios} />}
+        {vista === 'pagos' && <MisPremios premios={premios} nReferidos={(referidos || []).length} />}
+        {vista === 'cuenta' && (
           <>
-            <h1 className="hola">Hola, {perfil.nombre.split(' ')[0]}</h1>
-            <MiCodigo codigo={perfil.codigo} />
-            <MisPremios premios={premios} nReferidos={(referidos || []).length} />
-            <MisReferidos referidos={referidos} premios={premios} />
             <DatosPago perfil={perfil} onGuardado={cargar} />
+            <button className="btn sec ancho" onClick={() => supabase.auth.signOut()}>Cerrar sesión</button>
           </>
         )}
       </main>
+
+      <nav className="app-tabs" aria-label="Secciones">
+        {PESTANAS.map(t => (
+          <button key={t.k} className={`app-tab${vista === t.k ? ' on' : ''}`} onClick={() => ir(t.k)} aria-current={vista === t.k ? 'page' : undefined}>
+            <span className="app-tab-ico" dangerouslySetInnerHTML={{ __html: t.svg }} />
+            {t.t}
+          </button>
+        ))}
+      </nav>
     </div>
+  )
+}
+
+const ICO = (d) => `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`
+const PESTANAS = [
+  { k: 'inicio', t: 'Inicio', svg: ICO('<path d="M3 10a2 2 0 0 1 .7-1.53l7-6a2 2 0 0 1 2.6 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><path d="M10 21v-5a2 2 0 0 1 4 0v5"/>') },
+  { k: 'qr', t: 'Mi QR', svg: ICO('<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 17h4v4"/>') },
+  { k: 'referidos', t: 'Referidos', svg: ICO('<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>') },
+  { k: 'pagos', t: 'Pagos', svg: ICO('<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/><path d="M6 15h4"/>') },
+  { k: 'cuenta', t: 'Cuenta', svg: ICO('<path d="M3 21h18"/><path d="M5 21V10M19 21V10M9 21V10M15 21V10"/><path d="M12 3 3 8h18Z"/>') },
+]
+
+// Grupos de etapas para los contadores del Inicio.
+const EN_RUTA = ['primera_ruta', 'quince_rutas']
+const NO_AVANZO = ['no_aprobado', 'sin_meta_30_dias']
+// "Pedro R.": nombre y la inicial del apellido, como en la maqueta.
+const corto = (r) => { const [n, a] = String(r.nombre || r.razon_social || '').trim().split(/\s+/); return a ? `${n} ${a[0]}.` : (n || '') }
+
+// Avisos del Inicio: lo que pide una acción del referidor va primero.
+function armarAvisos(perfil, referidos, premios) {
+  const a = []
+  const hayPremios = premios.some(p => p.estado !== 'rechazado')
+  if (hayPremios && !perfil.clabe) a.push({ tipo: 'atencion', t: 'Registra tu cuenta para cobrar tus bonos', ir: 'cuenta' })
+  for (const r of referidos) {
+    if (r.etapa === 'firma_contrato') a.push({ tipo: 'avance', t: `${corto(r)}: firma de contrato`, ir: 'referidos' })
+    else if (r.etapa === 'entrevista_alta') a.push({ tipo: 'avance', t: `${corto(r)}: entrevista y alta`, ir: 'referidos' })
+    else if (r.etapa === 'primera_ruta') a.push({ tipo: 'avance', t: `${corto(r)}: ${r.rutas_30} de 15 rutas`, ir: 'referidos' })
+  }
+  return a.slice(0, 4)
+}
+
+// ── Inicio ──────────────────────────────────────────────────────────────────
+function Inicio({ referidos, premios, avisos, ir }) {
+  const validos = premios.filter(p => p.estado !== 'rechazado')
+  const suma = (xs) => xs.reduce((t, p) => t + Number(p.monto || 0), 0)
+  const pagado = suma(validos.filter(p => p.estado === 'pagado'))
+  const porCobrar = suma(validos) - pagado
+  const lista = referidos || []
+  const enRuta = lista.filter(r => EN_RUTA.includes(r.etapa)).length
+  const noAvanzo = lista.filter(r => NO_AVANZO.includes(r.etapa)).length
+  const enProceso = lista.length - enRuta - noAvanzo
+  const ultimoPago = validos.filter(p => p.pagado_at).sort((a, b) => b.pagado_at.localeCompare(a.pagado_at))[0]
+
+  return (
+    <>
+      {avisos.length > 0 && (
+        <>
+          <span className="app-eyebrow">Avisos</span>
+          <div className="avisos">
+            {avisos.map((x, i) => (
+              <button key={i} className="aviso-fila" onClick={() => ir(x.ir)}>
+                <span className={`aviso-tag ${x.tipo}`}>{x.tipo === 'atencion' ? 'ATENCIÓN' : 'AVANCE'}</span>
+                <span className="aviso-t">{x.t}</span>
+                <span className="aviso-f" aria-hidden="true">›</span>
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+
+      <span className="app-eyebrow">Mis bonos</span>
+      <section className="tarjeta bonos">
+        <div className="bonos-fecha"><b>Depositado</b>{ultimoPago ? ` · al ${fechaCorta(ultimoPago.pagado_at)}` : ' · todavía sin pagos'}</div>
+        <div className="bonos-montos">
+          <b className="bonos-grande">{pesos(pagado)}</b>
+          <span className="bonos-cobrar"><b>{pesos(porCobrar)}</b> por cobrar</span>
+        </div>
+        <div className="cifras cuatro">
+          <div><b>{lista.length}</b><span>Referidos</span></div>
+          <div><b>{enRuta}</b><span>En ruta</span></div>
+          <div><b>{enProceso}</b><span>En proceso</span></div>
+          <div><b>{noAvanzo}</b><span>No avanzó</span></div>
+        </div>
+        <button className="link-fuerte" onClick={() => ir('referidos')}>Ver mis referidos ›</button>
+      </section>
+
+      <section className="cta">
+        <b>¿Conoces a alguien que pueda facturar?</b>
+        <button className="btn" onClick={() => ir('qr')}>Compartir mi QR</button>
+      </section>
+    </>
   )
 }
 
