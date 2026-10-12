@@ -54,6 +54,7 @@ function Ingresar({ onOlvide, onInscribirme }) {
   return (
     <form onSubmit={entrar} className="form">
       <h2 className="form-t">Entra a tu cuenta</h2>
+      <p className="form-p">Si ya usas el Portal del Transportista, entra con ese mismo correo y contraseña: es una sola cuenta para los dos.</p>
       {err && <div className="aviso error">{err}</div>}
       <Campo label="Tu correo"><input type="email" value={correo} onChange={e => setCorreo(e.target.value)} autoComplete="email" placeholder="tucorreo@ejemplo.com" /></Campo>
       <Campo label="Contraseña"><Clave value={clave} onChange={setClave} placeholder="Tu contraseña" /></Campo>
@@ -115,6 +116,9 @@ function Registro({ onYaTengo }) {
   return (
     <form onSubmit={crear} className="form" noValidate>
       <h2 className="form-t">Inscríbete y recibe tu QR</h2>
+      <button type="button" className="aviso-cuenta-bt" onClick={onYaTengo}>
+        <b>¿Ya tienes cuenta en el Portal del Transportista?</b> No te inscribas de nuevo: entra con el mismo correo y la misma contraseña. ›
+      </button>
       {general && <div className="aviso error">{general}</div>}
       <Campo label="Tu nombre" error={err.nombre}><input value={d.nombre} onChange={e => S('nombre', e.target.value)} autoComplete="name" placeholder="Nombre y apellido" /></Campo>
       <Campo label="Tu WhatsApp" error={err.telefono}>
