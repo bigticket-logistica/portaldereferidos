@@ -9,27 +9,6 @@ import QRCode from 'qrcode'
 import { supabase, mensajeError } from './supabase'
 import { Campo, Logo, CURP_RE, soloDigitos, pesos, fechaCorta } from './comun'
 
-// El orden en que avanza un referido. Las etapas salen de vw_ref_avance.
-const PASOS = [
-  { k: 'registrado', t: 'Registrado' },
-  { k: 'en_revision', t: 'En revisión' },
-  { k: 'entrevista_alta', t: 'Entrevista y alta' },
-  { k: 'firma_contrato', t: 'Firma de contrato' },
-  { k: 'contrato_firmado', t: 'Contrato firmado' },
-  { k: 'primera_ruta', t: 'Primera ruta', premio: 500 },
-  { k: 'quince_rutas', t: '15 rutas en 30 días', premio: 1500 },
-]
-const indice = (etapa) => (etapa === 'sin_meta_30_dias' ? 5 : PASOS.findIndex(p => p.k === etapa))
-// Hasta la firma, la etapa es la que está en curso; desde el contrato firmado,
-// es la última meta lograda y la siguiente queda en curso.
-function clasePaso(n, i, sinMeta) {
-  const logrado = i >= 4 ? i : Math.max(0, i - 1)
-  const enCurso = i >= 4 ? i + 1 : Math.max(1, i)
-  if (n <= logrado) return 'hecho'
-  if (n === enCurso) return sinMeta ? 'fallido' : 'actual'
-  return ''
-}
-
 const ESTADO_PREMIO = {
   por_validar: { t: 'Por validar', c: 'amarillo' }, aprobado: { t: 'Aprobado', c: 'azul' },
   pagado: { t: 'Pagado', c: 'verde' }, rechazado: { t: 'No procede', c: 'rojo' },
@@ -41,6 +20,7 @@ export default function Panel({ session }) {
   const [premios, setPremios] = useState([])
   const [error, setError] = useState('')
   const [vista, setVista] = useState('inicio')
+  const [detalle, setDetalle] = useState(null)        // id del referido abierto
 
   const cargar = useCallback(async () => {
     const { data: p } = await supabase.from('ref_referidores').select('*').eq('id', session.user.id).maybeSingle()
@@ -63,7 +43,8 @@ export default function Panel({ session }) {
   }, [session])
 
   useEffect(() => { cargar() }, [cargar])
-  const ir = (v) => { setVista(v); window.scrollTo(0, 0) }
+  const ir = (v) => { setVista(v); setDetalle(null); window.scrollTo(0, 0) }
+  const abrir = (id) => { setVista('referidos'); setDetalle(id); window.scrollTo(0, 0) }
 
   if (perfil === undefined) return <div className="cargando"><span className="spin" /></div>
   if (perfil === null) return (
@@ -73,22 +54,36 @@ export default function Panel({ session }) {
   )
 
   const avisos = armarAvisos(perfil, referidos || [], premios)
+  const abierto = detalle ? (referidos || []).find(r => r.referido_id === detalle) : null
   const TITULOS = { qr: 'Mi QR personal', referidos: 'Mis referidos', pagos: 'Mis pagos', cuenta: 'Mi cuenta' }
 
   return (
     <div className="app">
       <header className="app-cab">
         <div className="app-cab-in">
+          {abierto && (
+            <button className="app-volver" onClick={() => { setDetalle(null); window.scrollTo(0, 0) }} aria-label="Volver a mis referidos">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
+            </button>
+          )}
+          {abierto ? (
+            <div className="app-cab-t">
+              <span className="app-saludo">Tu referido</span>
+              <span className="app-nombre">{corto(abierto)}</span>
+            </div>
+          ) : (
           <div className="app-cab-t">
             <span className="app-saludo">{vista === 'inicio' ? 'Hola,' : perfil.nombre}</span>
             <span className="app-nombre">{vista === 'inicio' ? perfil.nombre.toUpperCase() : TITULOS[vista]}</span>
           </div>
-          <button className="app-campana" onClick={() => ir('inicio')} aria-label={`Avisos: ${avisos.length}`}>
+          )}
+          {abierto && <span className={`pill blanco`}>{etapaDe(abierto).pill}</span>}
+          {!abierto && <button className="app-campana" onClick={() => ir('inicio')} aria-label={`Avisos: ${avisos.length}`}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0" />
             </svg>
             {avisos.length > 0 && <span className="app-badge">{avisos.length}</span>}
-          </button>
+          </button>}
         </div>
         {vista === 'inicio' && (
           <button className="app-banda" onClick={() => ir('qr')}>
@@ -103,8 +98,9 @@ export default function Panel({ session }) {
 
       <main className="app-cuerpo">
         {vista === 'inicio' && <Inicio perfil={perfil} referidos={referidos} premios={premios} avisos={avisos} ir={ir} />}
-        {vista === 'qr' && <MiCodigo codigo={perfil.codigo} />}
-        {vista === 'referidos' && <MisReferidos referidos={referidos} premios={premios} />}
+        {vista === 'qr' && <MiCodigo codigo={perfil.codigo} nombre={perfil.nombre} />}
+        {vista === 'referidos' && !abierto && <MisReferidos referidos={referidos} onAbrir={abrir} />}
+        {vista === 'referidos' && abierto && <Detalle r={abierto} premios={premios.filter(p => p.referido_id === abierto.referido_id)} />}
         {vista === 'pagos' && <MisPremios premios={premios} nReferidos={(referidos || []).length} />}
         {vista === 'cuenta' && (
           <>
@@ -207,42 +203,51 @@ function Inicio({ referidos, premios, avisos, ir }) {
   )
 }
 
-// ── El código, el link y el QR ──────────────────────────────────────────────
-function MiCodigo({ codigo }) {
+// ── Mi QR personal ─────────────────────────────────────────────────────────
+function MiCodigo({ codigo, nombre }) {
   const link = `${window.location.origin}/r/${codigo}`
   const linkQr = `${link}?o=qr`                      // así se sabe si llegó por el QR
   const [qr, setQr] = useState('')
   const [copiado, setCopiado] = useState(false)
 
   useEffect(() => {
-    QRCode.toDataURL(linkQr, { width: 720, margin: 2, color: { dark: '#002E5D', light: '#FFFFFF' } }).then(setQr)
+    QRCode.toDataURL(linkQr, { width: 720, margin: 1, color: { dark: '#002E5D', light: '#FFFFFF' } }).then(setQr)
   }, [linkQr])
 
-  const mensaje = `Bigticket busca transportistas que facturen (empresa o persona física con actividad empresarial) para rutas de última milla. Regístrate con mi invitación: ${link}`
+  const mensaje = `Hola. Bigticket busca transportistas que facturen para rutas de última milla con Mercado Libre: pagos semanales por ruta. Postúlate con mi invitación: ${link}`
+  const whatsapp = () => window.open(`https://wa.me/?text=${encodeURIComponent(mensaje)}`, '_blank')
   const copiar = async () => {
     try { await navigator.clipboard.writeText(link); setCopiado(true); setTimeout(() => setCopiado(false), 2000) } catch { /* sin portapapeles */ }
   }
-  const compartir = async () => {
-    if (navigator.share) { try { await navigator.share({ title: 'Invitación Bigticket', text: mensaje }) } catch { /* cancelado */ } return }
-    window.open(`https://wa.me/?text=${encodeURIComponent(mensaje)}`, '_blank')
-  }
 
   return (
-    <section className="tarjeta codigo-t">
-      <div className="codigo-izq">
-        <span className="rotulo">Tu código</span>
-        <div className="codigo-v">{codigo}</div>
-        <div className="link-caja">
-          <span className="link-t">{link.replace(/^https?:\/\//, '')}</span>
-          <button className="mini" onClick={copiar}>{copiado ? 'Copiado' : 'Copiar'}</button>
-        </div>
-        <div className="botones">
-          <button className="btn" onClick={compartir}>Compartir invitación</button>
-          {qr && <a className="btn sec" href={qr} download={`QR-${codigo}.png`}>Descargar QR</a>}
-        </div>
+    <>
+      <section className="tarjeta qr-tarjeta">
+        <div className="qr-marco">{qr ? <img src={qr} alt={`Código QR de la invitación ${codigo}`} /> : <span className="spin" />}</div>
+        <b className="qr-nombre">{nombre}</b>
+        <span className="qr-codigo">Código {codigo} · único para ti</span>
+      </section>
+      <button className="btn ancho con-ico" onClick={whatsapp}>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4" /></svg>
+        Compartir por WhatsApp
+      </button>
+      <div className="dos-botones">
+        {qr && (
+          <a className="btn sec con-ico" href={qr} download={`QR-${codigo}.png`}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" /></svg>
+            Descargar
+          </a>
+        )}
+        <button className="btn sec con-ico" onClick={copiar}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
+          {copiado ? 'Copiado' : 'Copiar link'}
+        </button>
       </div>
-      <div className="qr">{qr ? <img src={qr} alt={`Código QR de la invitación ${codigo}`} /> : <span className="spin" />}</div>
-    </section>
+      <div className="nota-caja">
+        <span className="nota-i">i</span>
+        <span>Quien se postule con este QR o este link queda registrado a tu nombre. La invitación ya va escrita: solo eliges a quién mandarla.</span>
+      </div>
+    </>
   )
 }
 
@@ -272,87 +277,112 @@ function MisPremios({ premios, nReferidos }) {
   )
 }
 
-// ── Referidos y su avance ───────────────────────────────────────────────────
-function MisReferidos({ referidos, premios }) {
-  const porReferido = useMemo(() => {
-    const m = {}
-    for (const p of premios) (m[p.referido_id] = m[p.referido_id] || []).push(p)
-    return m
-  }, [premios])
+// ── Etapas tal como las ve el referidor ─────────────────────────────────────
+// pill: la etiqueta corta · tono: color · texto: qué está pasando y qué puede
+// hacer quien lo refirió.
+function etapaDe(r) {
+  const T = {
+    registrado: { pill: 'REGISTRADO', tono: 'gris', texto: 'Recibimos su postulación. Un supervisor lo contactará en menos de 24 horas.' },
+    en_revision: { pill: 'EN REVISIÓN', tono: 'naranja', texto: 'Estamos revisando sus documentos y validándolo con Mercado Libre.' },
+    entrevista_alta: { pill: 'ENTREVISTA', tono: 'azul', texto: 'Tiene entrevista con Operaciones. Recuérdale llevar su INE, su licencia y la tarjeta de circulación.' },
+    firma_contrato: { pill: 'FIRMA', tono: 'azul', texto: 'Le enviamos su contrato. Recuérdale firmarlo para que pueda empezar a rutear.' },
+    contrato_firmado: { pill: 'CONTRATO FIRMADO', tono: 'azul', texto: 'Ya firmó. Con su primera ruta ganas tus primeros $500.' },
+    primera_ruta: { pill: 'EN RUTA', tono: 'navy', texto: null },
+    quince_rutas: { pill: 'META CUMPLIDA', tono: 'verde', texto: 'Cumplió 15 rutas en sus primeros 30 días. Ganaste los $2,000 completos.' },
+    sin_meta_30_dias: { pill: 'SIN META', tono: 'gris', texto: 'No llegó a 15 rutas en sus primeros 30 días. Los $500 de su primera ruta siguen siendo tuyos.' },
+    no_aprobado: { pill: 'NO AVANZÓ', tono: 'gris', texto: 'No pasó la validación. Puedes referir a otra persona con tu mismo QR.' },
+  }
+  return T[r.etapa] || T.registrado
+}
+const diasActivo = (r) => r.primera_ruta
+  ? Math.min(30, Math.max(1, Math.floor((Date.now() - new Date(r.primera_ruta + 'T12:00:00').getTime()) / 86400000) + 1))
+  : 0
 
+// ── Mis referidos ───────────────────────────────────────────────────────────
+function MisReferidos({ referidos, onAbrir }) {
+  if (referidos === null) return <div className="tarjeta vacia"><span className="spin" /></div>
+  if (referidos.length === 0) return (
+    <div className="tarjeta vacia">
+      <b>Todavía no tienes referidos.</b>
+      <span>Comparte tu QR con personas o empresas que puedan facturar. Cuando se postulen, aparecerán aquí con su avance.</span>
+    </div>
+  )
   return (
-    <section>
-      <h2 className="seccion-t">Tus referidos {referidos && referidos.length > 0 && <span className="cuenta">{referidos.length}</span>}</h2>
-      {referidos === null ? <div className="tarjeta vacia"><span className="spin" /></div>
-        : referidos.length === 0 ? (
-          <div className="tarjeta vacia">
-            <b>Todavía no tienes referidos.</b>
-            <span>Comparte tu código con personas o empresas que puedan facturar. Cuando se registren, aparecerán aquí con su avance.</span>
-          </div>
-        ) : referidos.map(r => <Referido key={r.referido_id} r={r} premios={porReferido[r.referido_id] || []} />)}
-    </section>
+    <>
+      <span className="app-eyebrow">{referidos.length} {referidos.length === 1 ? 'persona' : 'personas'} con tu QR</span>
+      {referidos.map(r => {
+        const e = etapaDe(r)
+        const dias = diasActivo(r)
+        return (
+          <button key={r.referido_id} className="tarjeta ref-fila" onClick={() => onAbrir(r.referido_id)}>
+            <span className="ref-fila-cab">
+              <b>{corto(r)}</b>
+              <span className={`pill ${e.tono}`}>{e.pill}</span>
+            </span>
+            {r.etapa === 'primera_ruta' ? (
+              <>
+                <span className="barra"><span style={{ width: `${Math.min(100, (r.rutas_30 / 15) * 100)}%` }} /></span>
+                <span className="ref-fila-pie"><span>Día {dias} de 30 · {r.rutas_30} de 15 rutas</span><em>Ver detalle ›</em></span>
+              </>
+            ) : (
+              <>
+                <span className="ref-fila-t">{e.texto}</span>
+                <span className="ref-fila-pie"><span>Desde el {fechaCorta(r.creado_at)}</span><em>Ver detalle ›</em></span>
+              </>
+            )}
+          </button>
+        )
+      })}
+    </>
   )
 }
 
-function Referido({ r, premios }) {
-  const i = indice(r.etapa)
-  const noAprobado = r.etapa === 'no_aprobado'
-  const sinMeta = r.etapa === 'sin_meta_30_dias'
-  const diasRestantes = r.primera_ruta
-    ? Math.max(0, 30 - Math.floor((Date.now() - new Date(r.primera_ruta + 'T12:00:00').getTime()) / 86400000))
-    : null
-  const titulo = r.razon_social || r.nombre
-  const actual = noAprobado ? 'No aprobado' : sinMeta ? 'No alcanzó las 15 rutas' : PASOS[i]?.t
+// ── Detalle de un referido: su avance a los 30 días y el paso a paso ────────
+function Detalle({ r, premios }) {
+  const dias = diasActivo(r)
+  const premio = (tramo) => premios.find(p => p.tramo === tramo)
+  const ESTADO = { por_validar: 'por validar', aprobado: 'aprobado', pagado: 'pagado', rechazado: 'no procede' }
+  const etapas = ['registrado', 'en_revision', 'entrevista_alta', 'firma_contrato', 'contrato_firmado', 'primera_ruta', 'quince_rutas']
+  const i = r.etapa === 'sin_meta_30_dias' ? 5 : r.etapa === 'no_aprobado' ? -1 : etapas.indexOf(r.etapa)
+  const cumple = r.primera_ruta ? new Date(new Date(r.primera_ruta + 'T12:00:00').getTime() + 29 * 86400000) : null
+  const p1 = premio('firma_y_primera_ruta'), p2 = premio('quince_rutas_30_dias')
+
+  // Cada paso: hecho, en curso o pendiente, con su fecha o su explicación.
+  const pasos = [
+    { t: 'Registro', d: `${fechaCorta(r.creado_at)} · con tu QR`, ok: true },
+    { t: 'Revisión de documentos', d: i > 1 ? 'Documentos validados' : 'Revisamos sus documentos con Mercado Libre', ok: i > 1, cur: i === 1 },
+    { t: 'Entrevista y alta', d: i > 2 ? 'Entrevista aprobada' : 'Con un supervisor de Operaciones', ok: i > 2, cur: i === 2 },
+    { t: 'Contrato firmado', d: r.firmado_at ? fechaCorta(r.firmado_at) : 'Le enviaremos su contrato para firmar', ok: !!r.firmado_at, cur: i === 3 },
+    { t: 'Primera ruta', d: r.primera_ruta ? `${fechaCorta(r.primera_ruta)} · $500${p1 ? ` ${ESTADO[p1.estado]}` : ''}` : 'Con su primera ruta ganas $500', ok: !!r.primera_ruta, cur: i === 4 },
+    { t: '30 días activo', d: r.etapa === 'primera_ruta' ? `Va en el día ${dias}. Se cumple el ${fechaCorta(cumple)}.` : r.etapa === 'quince_rutas' ? 'Completado' : r.etapa === 'sin_meta_30_dias' ? 'No llegó a 15 rutas' : 'Se cuentan desde su primera ruta', ok: r.etapa === 'quince_rutas', cur: r.etapa === 'primera_ruta', mal: r.etapa === 'sin_meta_30_dias' },
+    { t: 'Meta cumplida', d: p2 ? `$1,500 ${ESTADO[p2.estado]}` : '$1,500 al llegar a 15 rutas en 30 días', ok: r.etapa === 'quince_rutas' },
+  ]
 
   return (
-    <article className="tarjeta ref">
-      <header className="ref-cab">
-        <div style={{ minWidth: 0 }}>
-          <h3>{titulo}</h3>
-          <span className="ref-sub">{r.tipo === 'persona_moral' ? 'Persona moral' : 'Persona física'} · RFC {r.rfc} · desde {fechaCorta(r.creado_at)}</span>
-        </div>
-        <span className={`estado ${noAprobado ? 'rojo' : i >= 5 ? 'verde' : 'azul'}`}>{actual}</span>
-      </header>
-
-      {!noAprobado && (
-        <ol className="pasos" aria-label="Avance del referido">
-          {PASOS.map((p, n) => (
-            <li key={p.k} className={clasePaso(n, i, sinMeta)} aria-current={clasePaso(n, i, sinMeta) === 'actual' ? 'step' : undefined}>
-              <span className="punto" />
-              <span className="paso-t">{p.t}{p.premio ? <em> · {pesos(p.premio)}</em> : null}</span>
-            </li>
-          ))}
-        </ol>
+    <>
+      {r.primera_ruta && (
+        <>
+          <span className="app-eyebrow">Avance a los 30 días</span>
+          <section className="tarjeta avance">
+            <div className="avance-fila"><span>Días activo</span><b>{dias} de 30</b></div>
+            <span className="barra"><span style={{ width: `${(dias / 30) * 100}%` }} /></span>
+            <div className="avance-fila"><span>Rutas ejecutadas</span><b>{r.rutas_30} de 15</b></div>
+            <span className="barra"><span style={{ width: `${Math.min(100, (r.rutas_30 / 15) * 100)}%` }} /></span>
+          </section>
+        </>
       )}
-
-      <dl className="ref-datos">
-        {r.firmado_at && <div><dt>Contrato firmado</dt><dd>{fechaCorta(r.firmado_at)}</dd></div>}
-        {r.primera_ruta && <div><dt>Primera ruta</dt><dd>{fechaCorta(r.primera_ruta)}</dd></div>}
-        {r.primera_ruta && (
-          <div className="ancho">
-            <dt>Rutas en sus primeros 30 días</dt>
-            <dd>
-              <div className="barra"><span style={{ width: `${Math.min(100, (r.rutas_30 / 15) * 100)}%` }} /></div>
-              <span className="barra-t"><b>{r.rutas_30} de 15</b>{!sinMeta && r.rutas_30 < 15 && diasRestantes !== null && ` · quedan ${diasRestantes} días`}</span>
-            </dd>
-          </div>
-        )}
-      </dl>
-
-      <div className="ref-total">
-        <span>Ganado con este referido</span>
-        <b>{pesos(premios.filter(p => p.estado !== 'rechazado').reduce((t, p) => t + Number(p.monto || 0), 0))} <small>de $2,000</small></b>
-      </div>
-
-      {premios.length > 0 && (
-        <div className="premios-ref">
-          {premios.sort((a, b) => a.monto - b.monto).map(p => {
-            const e = ESTADO_PREMIO[p.estado] || ESTADO_PREMIO.por_validar
-            return <span key={p.id} className={`chip ${e.c}`}>{pesos(p.monto)} · {e.t}</span>
-          })}
-        </div>
-      )}
-    </article>
+      {r.etapa === 'no_aprobado' && <div className="nota-caja"><span className="nota-i">i</span><span>{etapaDe(r).texto}</span></div>}
+      <span className="app-eyebrow">Paso a paso</span>
+      <ol className="tarjeta linea">
+        {pasos.map((p, n) => (
+          <li key={n} className={p.ok ? 'hecho' : p.mal ? 'mal' : p.cur ? 'actual' : ''}>
+            <span className="linea-punto">{p.ok ? '✓' : ''}</span>
+            <span className="linea-t"><b>{p.t}</b><span>{p.d}</span></span>
+          </li>
+        ))}
+      </ol>
+      <span className="ref-rfc">{r.razon_social || r.nombre} · RFC {r.rfc}</span>
+    </>
   )
 }
 
