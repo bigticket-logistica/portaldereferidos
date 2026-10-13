@@ -43,6 +43,7 @@ export default function Invitacion({ codigo }) {
   const carpeta = useMemo(() => (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())), [])
   const [quien, setQuien] = useState(undefined)        // nombre corto de quien invita
   const [scs, setScs] = useState([])
+  const [vacantes, setVacantes] = useState({})          // sc → "3 Small Van, 1 Large Van"
   const [factura, setFactura] = useState(null)         // null: sin responder · true · false
   const [d, setD] = useState({ nombre: '', empresa: '', curp: '', rfc: '', ine: '', sc: '', correo: '', telefono: '', acepto: false })
   const [vehiculos, setVehiculos] = useState(['Small Van'])
@@ -57,6 +58,12 @@ export default function Invitacion({ codigo }) {
     supabase.rpc('fn_ref_invitacion', { p_codigo: codigo }).then(({ data }) => setQuien(data || null))
     // Cada centro llega con su nombre: en la lista se ve "Playa del Carmen (SPY1)".
     supabase.rpc('fn_ref_scs').then(({ data }) => setScs((data || []).map(r => (typeof r === 'string' ? { sc: r, nombre: r } : r))))
+    // Dónde se buscan transportistas hoy (lo administra Bigticket desde el Brain).
+    supabase.from('vw_ref_oportunidades').select('*').then(({ data }) => {
+      const m = {}
+      for (const o of data || []) (m[o.sc] = m[o.sc] || []).push(`${o.cantidad} ${o.tipo_vehiculo}`)
+      setVacantes(Object.fromEntries(Object.entries(m).map(([k, v]) => [k, v.join(', ')])))
+    })
   }, [codigo])
 
   const cambiarCantidad = (n) => {
@@ -186,7 +193,17 @@ export default function Invitacion({ codigo }) {
               <Campo label="¿En qué centro te gustaría operar?" error={err.sc}>
                 <select value={d.sc} onChange={e => S('sc', e.target.value)}>
                   <option value="">Elige un centro</option>
-                  {scs.map(c => <option key={c.sc} value={c.sc}>{c.nombre && c.nombre !== c.sc ? `${c.nombre} (${c.sc})` : c.sc}</option>)}
+                  {[['Se buscan transportistas', scs.filter(c => vacantes[c.sc])], ['Otros centros', scs.filter(c => !vacantes[c.sc])]]
+                    .filter(([, lista]) => lista.length > 0)
+                    .map(([titulo, lista]) => (
+                      <optgroup key={titulo} label={titulo}>
+                        {lista.map(c => (
+                          <option key={c.sc} value={c.sc}>
+                            {c.nombre && c.nombre !== c.sc ? `${c.nombre} (${c.sc})` : c.sc}{vacantes[c.sc] ? ` · se buscan ${vacantes[c.sc]}` : ''}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ))}
                 </select>
               </Campo>
               <Campo label="¿Cuántos vehículos tienes para operar?">

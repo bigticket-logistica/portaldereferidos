@@ -14,6 +14,7 @@ export default function Panel({ session }) {
   const [perfil, setPerfil] = useState(undefined)      // undefined: cargando · null: sin cuenta de referidor
   const [referidos, setReferidos] = useState(null)
   const [premios, setPremios] = useState([])
+  const [oportunidades, setOportunidades] = useState([])
   const [error, setError] = useState('')
   const [vista, setVista] = useState('inicio')
   const [detalle, setDetalle] = useState(null)        // id del referido abierto
@@ -32,11 +33,12 @@ export default function Panel({ session }) {
       setPerfil(null); return
     }
     setPerfil(p)
-    const [r, pr] = await Promise.all([
+    const [r, pr, op] = await Promise.all([
       supabase.from('vw_ref_mis_referidos').select('*').order('creado_at', { ascending: false }),
       supabase.from('ref_premios').select('*'),
+      supabase.from('vw_ref_oportunidades').select('*'),
     ])
-    setReferidos(r.data || []); setPremios(pr.data || [])
+    setReferidos(r.data || []); setPremios(pr.data || []); setOportunidades(op.data || [])
   }, [session])
 
   useEffect(() => { cargar() }, [cargar])
@@ -101,7 +103,7 @@ export default function Panel({ session }) {
       </header>
 
       <main className="app-cuerpo">
-        {vista === 'inicio' && <Inicio perfil={perfil} referidos={referidos} premios={premios} avisos={avisos} ir={ir} />}
+        {vista === 'inicio' && <Inicio perfil={perfil} referidos={referidos} premios={premios} avisos={avisos} oportunidades={oportunidades} ir={ir} />}
         {vista === 'qr' && <MiCodigo codigo={perfil.codigo} nombre={perfil.nombre} />}
         {vista === 'referidos' && !abierto && <MisReferidos referidos={referidos} onAbrir={abrir} />}
         {vista === 'referidos' && abierto && <Detalle r={abierto} premios={premios.filter(p => p.referido_id === abierto.referido_id)} />}
@@ -154,7 +156,7 @@ function armarAvisos(perfil, referidos, premios) {
 }
 
 // ── Inicio ──────────────────────────────────────────────────────────────────
-function Inicio({ referidos, premios, avisos, ir }) {
+function Inicio({ referidos, premios, avisos, oportunidades, ir }) {
   const validos = premios.filter(p => p.estado !== 'rechazado')
   const suma = (xs) => xs.reduce((t, p) => t + Number(p.monto || 0), 0)
   const pagado = suma(validos.filter(p => p.estado === 'pagado'))
@@ -198,9 +200,43 @@ function Inicio({ referidos, premios, avisos, ir }) {
         <button className="link-fuerte" onClick={() => ir('referidos')}>Ver mis referidos ›</button>
       </section>
 
+      <Oportunidades lista={oportunidades} />
+
       <section className="cta">
         <b>¿Conoces a alguien que pueda facturar?</b>
         <button className="btn" onClick={() => ir('qr')}>Compartir mi QR</button>
+      </section>
+    </>
+  )
+}
+
+// ── Dónde se buscan transportistas ──────────────────────────────────────────
+// Lo administra Bigticket desde el Brain (pestaña Referidos → Oportunidades).
+export function agruparOportunidades(lista) {
+  const m = {}
+  for (const o of lista || []) {
+    const c = (m[o.sc] = m[o.sc] || { sc: o.sc, nombre: o.nombre, tipos: [], total: 0 })
+    c.tipos.push(o); c.total += o.cantidad
+  }
+  return Object.values(m).sort((a, b) => b.total - a.total)
+}
+
+function Oportunidades({ lista }) {
+  const centros = agruparOportunidades(lista)
+  if (centros.length === 0) return null
+  return (
+    <>
+      <span className="app-eyebrow">Se buscan transportistas</span>
+      <section className="tarjeta oport">
+        {centros.map(c => (
+          <div key={c.sc} className="oport-fila">
+            <div className="oport-t"><b>{c.nombre}</b><span>{c.sc}</span></div>
+            <div className="oport-chips">
+              {c.tipos.map(t => <span key={t.tipo_vehiculo} className="chip-v"><b>{t.cantidad}</b> {t.tipo_vehiculo}</span>)}
+            </div>
+          </div>
+        ))}
+        <p className="nota oport-nota">Comparte tu QR con quien pueda operar en estos centros: son los que más se necesitan hoy.</p>
       </section>
     </>
   )

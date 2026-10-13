@@ -387,3 +387,15 @@ button, input { font: inherit; }
 .tel-pref svg { border-radius: 2px; box-shadow: 0 0 0 1px rgba(0,0,0,.08); }
 .tel-mx input { flex: 1; min-width: 0; border: none; background: transparent; padding: 0 12px; font-size: 16px; color: var(--ink); outline: none; height: 100%; }
 .campo .tel-mx input { border: none; height: 100%; background: transparent; }
+
+/* Dónde se buscan transportistas (oportunidades por centro). */
+.oport { padding: 4px 0 12px; }
+.oport-fila { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 16px; }
+.oport-fila + .oport-fila { border-top: 1px solid #F0F1F3; }
+.oport-t { display: flex; flex-direction: column; min-width: 0; }
+.oport-t b { font-family: var(--font-display); font-size: 14.5px; color: var(--navy); }
+.oport-t span { font-size: 12px; color: var(--muted); }
+.oport-chips { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+.chip-v { background: var(--orange-soft); color: #8A4A0F; border-radius: 999px; padding: 4px 10px; font-size: 12.5px; white-space: nowrap; }
+.chip-v b { font-family: var(--font-display); color: var(--orange); }
+.oport-nota { padding: 4px 16px 0; font-size: 12.5px; }
