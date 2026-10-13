@@ -43,7 +43,7 @@ export default function Invitacion({ codigo }) {
   const carpeta = useMemo(() => (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())), [])
   const [quien, setQuien] = useState(undefined)        // nombre corto de quien invita
   const [scs, setScs] = useState([])
-  const [vacantes, setVacantes] = useState({})          // sc → "3 Small Van, 1 Large Van"
+  const [oport, setOport] = useState(null)              // lo que define el analista en el Brain
   const [factura, setFactura] = useState(null)         // null: sin responder · true · false
   const [d, setD] = useState({ nombre: '', empresa: '', curp: '', rfc: '', ine: '', sc: '', correo: '', telefono: '', acepto: false })
   const [vehiculos, setVehiculos] = useState(['Small Van'])
@@ -59,16 +59,32 @@ export default function Invitacion({ codigo }) {
     // Cada centro llega con su nombre: en la lista se ve "Playa del Carmen (SPY1)".
     supabase.rpc('fn_ref_scs').then(({ data }) => setScs((data || []).map(r => (typeof r === 'string' ? { sc: r, nombre: r } : r))))
     // Dónde se buscan transportistas hoy (lo administra Bigticket desde el Brain).
-    supabase.from('vw_ref_oportunidades').select('*').then(({ data }) => {
-      const m = {}
-      for (const o of data || []) (m[o.sc] = m[o.sc] || []).push(`${o.cantidad} ${o.tipo_vehiculo}`)
-      setVacantes(Object.fromEntries(Object.entries(m).map(([k, v]) => [k, v.join(', ')])))
-    })
+    supabase.from('vw_ref_oportunidades').select('*').then(({ data }) => setOport(data || []))
   }, [codigo])
+
+  // Centros y tipos de vehículo que define el analista en el Brain (Referidos →
+  // Oportunidades). Si todavía no hay ninguno definido, se ofrecen todos los
+  // centros activos y los dos tipos de siempre, para no cerrar la postulación.
+  const hayOport = (oport || []).length > 0
+  const centrosOpciones = hayOport
+    ? Object.values((oport || []).reduce((m, o) => { m[o.sc] = m[o.sc] || { sc: o.sc, nombre: o.nombre }; return m }, {}))
+        .sort((a, b) => String(a.nombre).localeCompare(String(b.nombre)))
+    : scs
+  const buscadosEn = (sc) => (oport || []).filter(o => o.sc === sc)
+  const tiposPara = (sc) => {
+    const t = hayOport ? [...new Set((sc ? buscadosEn(sc) : oport).map(o => o.tipo_vehiculo))] : []
+    return t.length ? t : ['Small Van', 'Large Van']
+  }
+  const tipos = tiposPara(d.sc)
+
+  // Al cambiar de centro, cada vehículo queda con un tipo que ese centro busca.
+  useEffect(() => {
+    setVehiculos(v => v.map(t => (tipos.includes(t) ? t : tipos[0])))
+  }, [d.sc, oport])  // eslint-disable-line react-hooks/exhaustive-deps
 
   const cambiarCantidad = (n) => {
     const total = Math.max(1, Math.min(10, n))
-    setVehiculos(v => total > v.length ? [...v, ...Array(total - v.length).fill('Small Van')] : v.slice(0, total))
+    setVehiculos(v => total > v.length ? [...v, ...Array(total - v.length).fill(tipos[0])] : v.slice(0, total))
   }
 
   const subir = async (k, file) => {
@@ -193,19 +209,17 @@ export default function Invitacion({ codigo }) {
               <Campo label="¿En qué centro te gustaría operar?" error={err.sc}>
                 <select value={d.sc} onChange={e => S('sc', e.target.value)}>
                   <option value="">Elige un centro</option>
-                  {[['Se buscan transportistas', scs.filter(c => vacantes[c.sc])], ['Otros centros', scs.filter(c => !vacantes[c.sc])]]
-                    .filter(([, lista]) => lista.length > 0)
-                    .map(([titulo, lista]) => (
-                      <optgroup key={titulo} label={titulo}>
-                        {lista.map(c => (
-                          <option key={c.sc} value={c.sc}>
-                            {c.nombre && c.nombre !== c.sc ? `${c.nombre} (${c.sc})` : c.sc}{vacantes[c.sc] ? ` · se buscan ${vacantes[c.sc]}` : ''}
-                          </option>
-                        ))}
-                      </optgroup>
-                    ))}
+                  {centrosOpciones.map(c => (
+                    <option key={c.sc} value={c.sc}>{c.nombre && c.nombre !== c.sc ? `${c.nombre} (${c.sc})` : c.sc}</option>
+                  ))}
                 </select>
               </Campo>
+              {d.sc && buscadosEn(d.sc).length > 0 && (
+                <div className="buscados">
+                  <span>En este centro se buscan:</span>
+                  <div>{buscadosEn(d.sc).map(o => <span key={o.tipo_vehiculo} className="chip-v"><b>{o.cantidad}</b> {o.tipo_vehiculo}</span>)}</div>
+                </div>
+              )}
               <Campo label="¿Cuántos vehículos tienes para operar?">
                 <div className="contador">
                   <button type="button" onClick={() => cambiarCantidad(vehiculos.length - 1)} aria-label="Uno menos">−</button>
@@ -217,8 +231,8 @@ export default function Invitacion({ codigo }) {
                 {vehiculos.map((t, i) => (
                   <div key={i} className="vehiculo">
                     <span>Vehículo {i + 1}</span>
-                    <div className="segmento mini-seg">
-                      {['Small Van', 'Large Van'].map(op => (
+                    <div className="tipos-v">
+                      {tipos.map(op => (
                         <button type="button" key={op} className={t === op ? 'on' : ''} aria-pressed={t === op}
                           onClick={() => setVehiculos(v => v.map((x, j) => (j === i ? op : x)))}>{op}</button>
                       ))}

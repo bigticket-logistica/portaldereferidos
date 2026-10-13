@@ -399,3 +399,14 @@ button, input { font: inherit; }
 .chip-v { background: var(--orange-soft); color: #8A4A0F; border-radius: 999px; padding: 4px 10px; font-size: 12.5px; white-space: nowrap; }
 .chip-v b { font-family: var(--font-display); color: var(--orange); }
 .oport-nota { padding: 4px 16px 0; font-size: 12.5px; }
+
+/* Postulación: lo que se busca en el centro elegido y los tipos de vehículo. */
+.buscados { display: flex; flex-direction: column; gap: 6px; background: var(--orange-soft); border-radius: 12px; padding: 10px 12px; margin-top: -4px; }
+.buscados > span { font-size: 13px; font-weight: 600; color: #8A4A0F; }
+.buscados > div { display: flex; flex-wrap: wrap; gap: 6px; }
+.buscados .chip-v { background: #fff; }
+.vehiculo { align-items: flex-start; }
+.vehiculo > span { padding-top: 8px; flex-shrink: 0; }
+.tipos-v { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+.tipos-v button { border: 1px solid var(--line); background: #F7F8FA; border-radius: 999px; padding: 7px 12px; font-family: var(--font-display); font-weight: 700; font-size: 12.5px; color: var(--muted); cursor: pointer; }
+.tipos-v button.on { background: var(--navy); border-color: var(--navy); color: #fff; }
