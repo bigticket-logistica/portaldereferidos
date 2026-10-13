@@ -223,7 +223,15 @@ export function agruparOportunidades(lista) {
 
 function Oportunidades({ lista }) {
   const centros = agruparOportunidades(lista)
-  if (centros.length === 0) return null
+  if (centros.length === 0) return (
+    <>
+      <span className="app-eyebrow">Se buscan transportistas</span>
+      <div className="nota-caja">
+        <span className="nota-i">i</span>
+        <span>Por ahora no tenemos campañas de referidos activas en ningún SC. Apenas se abra una, aparecerá aquí.</span>
+      </div>
+    </>
+  )
   return (
     <>
       <span className="app-eyebrow">Se buscan transportistas</span>

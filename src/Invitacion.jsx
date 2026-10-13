@@ -63,8 +63,8 @@ export default function Invitacion({ codigo }) {
   }, [codigo])
 
   // Centros y tipos de vehículo que define el analista en el Brain (Referidos →
-  // Oportunidades). Si todavía no hay ninguno definido, se ofrecen todos los
-  // centros activos y los dos tipos de siempre, para no cerrar la postulación.
+  // Oportunidades). Si no hay ninguna campaña activa, no se recibe postulación:
+  // se muestra un aviso, y la página se abre sola en cuanto se crea una.
   const hayOport = (oport || []).length > 0
   const centrosOpciones = hayOport
     ? Object.values((oport || []).reduce((m, o) => { m[o.sc] = m[o.sc] || { sc: o.sc, nombre: o.nombre }; return m }, {}))
@@ -159,6 +159,14 @@ export default function Invitacion({ codigo }) {
       <main className="acceso-hoja ancha">
         {quien === null ? (
           <div className="form"><div className="aviso error">Este link de invitación no es válido. Pídele a quien te lo compartió que te lo envíe de nuevo.</div></div>
+        ) : oport !== null && oport.length === 0 && !listo ? (
+          <div className="form">
+            <h2 className="form-t">Por ahora no hay campañas activas</h2>
+            <div className="nota-caja">
+              <span className="nota-i">i</span>
+              <span>Por ahora no tenemos campañas de referidos activas en ningún SC. Vuelve a abrir esta invitación más adelante: apenas se abra una, podrás postular desde aquí.</span>
+            </div>
+          </div>
         ) : listo ? (
           <div className="form">
             <h2 className="form-t">¡Listo, recibimos tu postulación!</h2>
