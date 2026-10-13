@@ -378,3 +378,12 @@ button, input { font: inherit; }
 @media (max-width: 520px) { .form .dos { grid-template-columns: 1fr; } }
 .aviso-cuenta-bt { text-align: left; border: 1px solid #C9D6EA; background: var(--blue-soft); color: var(--ink); border-radius: 12px; padding: 11px 14px; font: inherit; font-size: 13.5px; line-height: 1.45; cursor: pointer; }
 .aviso-cuenta-bt b { color: var(--navy); }
+
+/* Teléfono con bandera de México y +52 fijo. */
+.tel-mx { display: flex; height: 48px; border: 1px solid var(--line); border-radius: 10px; background: #F7F8FA; overflow: hidden; transition: border-color .15s, background .15s; }
+.tel-mx:focus-within { border-color: var(--navy); background: #fff; }
+.con-error .tel-mx { border-color: var(--red); }
+.tel-pref { display: flex; align-items: center; gap: 7px; padding: 0 12px; border-right: 1px solid var(--line); font-weight: 600; font-size: 15px; color: var(--ink); flex-shrink: 0; }
+.tel-pref svg { border-radius: 2px; box-shadow: 0 0 0 1px rgba(0,0,0,.08); }
+.tel-mx input { flex: 1; min-width: 0; border: none; background: transparent; padding: 0 12px; font-size: 16px; color: var(--ink); outline: none; height: 100%; }
+.campo .tel-mx input { border: none; height: 100%; background: transparent; }

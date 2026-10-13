@@ -47,3 +47,33 @@ export function Clave({ value, onChange, placeholder, autoComplete = 'current-pa
 export function Logo({ blanco = true, alto = 30 }) {
   return <img src={blanco ? '/logo-bigticket-blanco.png' : '/logo-bt-naranjo-negro.png'} alt="Bigticket" style={{ height: alto }} />
 }
+
+// Teléfono de México: la bandera y el +52 van fijos y la persona escribe solo
+// sus 10 dígitos. La bandera es un dibujo y no un emoji, porque en Windows los
+// emojis de banderas se ven como las letras "MX".
+// Si pegan el número completo (+52, +52 1 o 52 1…), se queda con los 10 dígitos.
+function soloDiezMX(v) {
+  let d = String(v || '').replace(/\D/g, '')
+  if (d.length > 10 && d.startsWith('52')) d = d.slice(2)
+  if (d.length > 10 && d.startsWith('1')) d = d.slice(1)
+  return d.slice(0, 10)
+}
+
+export function TelefonoMX({ value, onChange, placeholder = '10 dígitos' }) {
+  return (
+    <div className="tel-mx">
+      <span className="tel-pref" aria-hidden="true">
+        <svg width="22" height="15" viewBox="0 0 3 2" role="img">
+          <rect width="1" height="2" fill="#006847" />
+          <rect x="1" width="1" height="2" fill="#fff" />
+          <rect x="2" width="1" height="2" fill="#CE1126" />
+          <circle cx="1.5" cy="1" r=".22" fill="#8C5A2B" />
+        </svg>
+        +52
+      </span>
+      <input type="tel" inputMode="numeric" value={value} placeholder={placeholder} autoComplete="tel-national"
+        aria-label="Teléfono de México, 10 dígitos después del +52"
+        onChange={e => onChange(soloDiezMX(e.target.value))} />
+    </div>
+  )
+}

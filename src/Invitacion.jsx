@@ -12,7 +12,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 import { useEffect, useMemo, useState } from 'react'
 import { supabase, mensajeError } from './supabase'
-import { Campo, Logo, CURP_RE, RFC_RE, soloDigitos } from './comun'
+import { Campo, Logo, CURP_RE, RFC_RE, soloDigitos, TelefonoMX } from './comun'
 
 const BUCKET = 'documentos-terceros'
 const DOCS = [
@@ -176,7 +176,7 @@ export default function Invitacion({ codigo }) {
               <div className="dos">
                 <Campo label="Correo" error={err.correo}><input type="email" value={d.correo} onChange={e => S('correo', e.target.value)} autoComplete="email" /></Campo>
                 <Campo label="Teléfono celular" error={err.telefono} ayuda="10 dígitos, para WhatsApp.">
-                  <input type="tel" inputMode="numeric" value={d.telefono} onChange={e => S('telefono', soloDigitos(e.target.value).slice(0, 10))} autoComplete="tel-national" />
+                  <TelefonoMX value={d.telefono} onChange={v => S('telefono', v)} />
                 </Campo>
               </div>
             </fieldset>

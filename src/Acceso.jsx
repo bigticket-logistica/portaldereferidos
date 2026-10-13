@@ -7,7 +7,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 import { useEffect, useState } from 'react'
 import { supabase, mensajeError } from './supabase'
-import { Campo, Clave, Logo, CURP_RE, soloDigitos } from './comun'
+import { Campo, Clave, Logo, CURP_RE, soloDigitos, TelefonoMX } from './comun'
 
 export default function Acceso({ recuperando, onListo, onRecuperando }) {
   // Se abre en la inscripción, como la maqueta: la mayoría llega a inscribirse.
@@ -122,7 +122,7 @@ function Registro({ onYaTengo }) {
       {general && <div className="aviso error">{general}</div>}
       <Campo label="Tu nombre" error={err.nombre}><input value={d.nombre} onChange={e => S('nombre', e.target.value)} autoComplete="name" placeholder="Nombre y apellido" /></Campo>
       <Campo label="Tu WhatsApp" error={err.telefono}>
-        <input type="tel" inputMode="numeric" value={d.telefono} onChange={e => S('telefono', soloDigitos(e.target.value).slice(0, 10))} autoComplete="tel-national" placeholder="10 dígitos" />
+        <TelefonoMX value={d.telefono} onChange={v => S('telefono', v)} />
       </Campo>
       <Campo label="Tu CURP" error={err.curp} ayuda="Con ella evitamos cuentas duplicadas.">
         <input value={d.curp} onChange={e => S('curp', e.target.value.toUpperCase().replace(/\s/g, '').slice(0, 18))} autoCapitalize="characters" className="mono" placeholder="18 caracteres" />

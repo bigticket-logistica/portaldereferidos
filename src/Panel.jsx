@@ -7,7 +7,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import QRCode from 'qrcode'
 import { supabase, mensajeError } from './supabase'
-import { Campo, Logo, CURP_RE, soloDigitos, pesos, fechaCorta } from './comun'
+import { Campo, Logo, CURP_RE, soloDigitos, pesos, fechaCorta, TelefonoMX } from './comun'
 
 
 export default function Panel({ session }) {
@@ -596,7 +596,7 @@ function CompletarCuenta({ error, onListo }) {
         {err && <div className="aviso error">{err}</div>}
         <Campo label="Nombre completo"><input value={d.nombre} onChange={e => S('nombre', e.target.value)} /></Campo>
         <Campo label="CURP"><input className="mono" value={d.curp} onChange={e => S('curp', e.target.value.toUpperCase().replace(/\s/g, '').slice(0, 18))} /></Campo>
-        <Campo label="Teléfono celular"><input type="tel" inputMode="numeric" value={d.telefono} onChange={e => S('telefono', soloDigitos(e.target.value).slice(0, 10))} /></Campo>
+        <Campo label="Tu WhatsApp"><TelefonoMX value={d.telefono} onChange={v => S('telefono', v)} /></Campo>
         <button className="btn" disabled={busy}>{busy ? 'Creando…' : 'Crear mi código'}</button>
         <button type="button" className="link" onClick={() => supabase.auth.signOut()}>Salir</button>
       </form>
