@@ -55,7 +55,8 @@ export default function Invitacion({ codigo }) {
 
   useEffect(() => {
     supabase.rpc('fn_ref_invitacion', { p_codigo: codigo }).then(({ data }) => setQuien(data || null))
-    supabase.rpc('fn_ref_scs').then(({ data }) => setScs((data || []).map(r => r.sc || r)))
+    // Cada centro llega con su nombre: en la lista se ve "Playa del Carmen (SPY1)".
+    supabase.rpc('fn_ref_scs').then(({ data }) => setScs((data || []).map(r => (typeof r === 'string' ? { sc: r, nombre: r } : r))))
   }, [codigo])
 
   const cambiarCantidad = (n) => {
@@ -185,7 +186,7 @@ export default function Invitacion({ codigo }) {
               <Campo label="¿En qué centro te gustaría operar?" error={err.sc}>
                 <select value={d.sc} onChange={e => S('sc', e.target.value)}>
                   <option value="">Elige un centro</option>
-                  {scs.map(sc => <option key={sc} value={sc}>{sc}</option>)}
+                  {scs.map(c => <option key={c.sc} value={c.sc}>{c.nombre && c.nombre !== c.sc ? `${c.nombre} (${c.sc})` : c.sc}</option>)}
                 </select>
               </Campo>
               <Campo label="¿Cuántos vehículos tienes para operar?">
