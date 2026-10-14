@@ -143,16 +143,35 @@ const NO_AVANZO = ['no_aprobado', 'sin_meta_30_dias']
 const corto = (r) => { const [n, a] = String(r.nombre || r.razon_social || '').trim().split(/\s+/); return a ? `${n} ${a[0]}.` : (n || '') }
 
 // Avisos del Inicio: lo que pide una acción del referidor va primero.
+// Orden: lo que pide una acción, después los bonos (pagado, aprobado, por
+// validar, no procede) y al final el avance de cada referido.
+const ETIQUETA_AVISO = { atencion: 'ATENCIÓN', pagado: 'PAGADO', aprobado: 'APROBADO', bono: 'BONO', rechazo: 'REVISA', avance: 'AVANCE' }
+const DIAS_VISIBLE = 14
+const reciente = (f) => f && (Date.now() - new Date(f).getTime()) < DIAS_VISIBLE * 86400000
+
 function armarAvisos(perfil, referidos, premios) {
   const a = []
   const hayPremios = premios.some(p => p.estado !== 'rechazado')
   if (hayPremios && !perfil.clabe) a.push({ tipo: 'atencion', t: 'Registra tu cuenta para cobrar tus bonos', ir: 'registrar' })
+
+  // Bonos: el nombre del referido y de qué meta es cada uno.
+  const quien = (id) => { const r = referidos.find(x => x.referido_id === id); return r ? corto(r) : 'tu referido' }
+  const META = { firma_y_primera_ruta: 'primera ruta', quince_rutas_30_dias: '15 rutas' }
+  const ordenados = [...premios].sort((x, y) => String(y.actualizado_at || y.cumplido_at).localeCompare(String(x.actualizado_at || x.cumplido_at)))
+  for (const p of ordenados) {
+    const monto = pesos(p.monto), de = `${quien(p.referido_id)} · ${META[p.tramo] || 'meta'}`
+    if (p.estado === 'pagado' && reciente(p.pagado_at)) a.push({ tipo: 'pagado', t: `Te depositamos ${monto} · ${de}`, ir: 'pagos' })
+    else if (p.estado === 'aprobado') a.push({ tipo: 'aprobado', t: `Aprobamos tu bono de ${monto} · ${de}`, ir: 'pagos' })
+    else if (p.estado === 'por_validar') a.push({ tipo: 'bono', t: `Ganaste ${monto} con ${de}`, ir: 'pagos' })
+    else if (p.estado === 'rechazado' && reciente(p.actualizado_at || p.cumplido_at)) a.push({ tipo: 'rechazo', t: `No procede tu bono de ${monto} · ${quien(p.referido_id)}`, ir: 'pagos' })
+  }
+
   for (const r of referidos) {
     if (r.etapa === 'firma_contrato') a.push({ tipo: 'avance', t: `${corto(r)}: firma de contrato`, ir: 'referidos' })
     else if (r.etapa === 'entrevista_alta') a.push({ tipo: 'avance', t: `${corto(r)}: entrevista y alta`, ir: 'referidos' })
     else if (r.etapa === 'primera_ruta') a.push({ tipo: 'avance', t: `${corto(r)}: ${r.rutas_30} de 15 rutas`, ir: 'referidos' })
   }
-  return a.slice(0, 4)
+  return a.slice(0, 5)
 }
 
 // ── Inicio ──────────────────────────────────────────────────────────────────
@@ -175,7 +194,7 @@ function Inicio({ referidos, premios, avisos, oportunidades, ir }) {
           <div className="avisos">
             {avisos.map((x, i) => (
               <button key={i} className="aviso-fila" onClick={() => ir(x.ir)}>
-                <span className={`aviso-tag ${x.tipo}`}>{x.tipo === 'atencion' ? 'ATENCIÓN' : 'AVANCE'}</span>
+                <span className={`aviso-tag t-${x.tipo}`}>{ETIQUETA_AVISO[x.tipo] || 'AVISO'}</span>
                 <span className="aviso-t">{x.t}</span>
                 <span className="aviso-f" aria-hidden="true">›</span>
               </button>
