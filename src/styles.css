@@ -429,3 +429,17 @@ button, input { font: inherit; }
 .aviso-tag.t-aprobado { background: var(--blue-soft); color: var(--navy); border-color: #B8C7DD; }
 .aviso-tag.t-avance { background: #fff; color: var(--navy); border-color: var(--navy); }
 .aviso-tag.t-rechazo { background: #F0F1F3; color: var(--muted); border-color: #DADDE2; }
+
+/* Oportunidades con tarifa por viaje y comentario. */
+.oport-fila { align-items: flex-start; }
+.oport-tipos { display: flex; flex-direction: column; gap: 8px; align-items: flex-end; min-width: 0; }
+.oport-tipos.izq { align-items: stretch; }
+.tipo-b { display: flex; flex-direction: column; gap: 3px; max-width: 280px; }
+.oport-tipos.izq .tipo-b { max-width: none; }
+.tipo-b-fila { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.oport-tipos.izq .tipo-b-fila { justify-content: flex-start; }
+.tipo-b-tarifa { font-size: 12.5px; color: var(--muted); white-space: nowrap; }
+.tipo-b-tarifa b { font-family: var(--font-display); color: var(--navy); font-size: 14px; }
+.tipo-b-nota { margin: 0; font-size: 12.5px; line-height: 1.4; color: var(--muted); text-align: right; }
+.oport-tipos.izq .tipo-b-nota { text-align: left; }
+.buscados > .oport-tipos { display: flex; }

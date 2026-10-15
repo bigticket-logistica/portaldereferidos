@@ -13,6 +13,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase, mensajeError } from './supabase'
 import { Campo, Logo, CURP_RE, RFC_RE, soloDigitos, TelefonoMX } from './comun'
+import { TipoBuscado } from './Panel'
 
 const BUCKET = 'documentos-terceros'
 const DOCS = [
@@ -228,7 +229,7 @@ export default function Invitacion({ codigo, canal = false }) {
               {d.sc && buscadosEn(d.sc).length > 0 && (
                 <div className="buscados">
                   <span>En este centro se buscan:</span>
-                  <div>{buscadosEn(d.sc).map(o => <span key={o.tipo_vehiculo} className="chip-v"><b>{o.cantidad}</b> {o.tipo_vehiculo}</span>)}</div>
+                  <div className="oport-tipos izq">{buscadosEn(d.sc).map(o => <TipoBuscado key={o.tipo_vehiculo} t={o} />)}</div>
                 </div>
               )}
               <Campo label="¿Cuántos vehículos tienes para operar?">
