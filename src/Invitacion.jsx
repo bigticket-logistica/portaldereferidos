@@ -38,7 +38,7 @@ async function prepararArchivo(file) {
   } catch { return file }
 }
 
-export default function Invitacion({ codigo }) {
+export default function Invitacion({ codigo, canal = false }) {
   const origen = new URLSearchParams(window.location.search).get('o') === 'qr' ? 'qr' : 'link'
   const carpeta = useMemo(() => (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())), [])
   const [quien, setQuien] = useState(undefined)        // nombre corto de quien invita
@@ -55,7 +55,10 @@ export default function Invitacion({ codigo }) {
   const S = (k, v) => setD(x => ({ ...x, [k]: v }))
 
   useEffect(() => {
-    supabase.rpc('fn_ref_invitacion', { p_codigo: codigo }).then(({ data }) => setQuien(data || null))
+    // Por un canal (la camioneta) no hay persona que invite: el encabezado
+    // queda "Opera con Bigticket" y solo se revisa que el canal exista.
+    if (canal) supabase.rpc('fn_ref_canal', { p_codigo: codigo }).then(({ data }) => setQuien(data ? '' : null))
+    else supabase.rpc('fn_ref_invitacion', { p_codigo: codigo }).then(({ data }) => setQuien(data || null))
     // Cada centro llega con su nombre: en la lista se ve "Playa del Carmen (SPY1)".
     supabase.rpc('fn_ref_scs').then(({ data }) => setScs((data || []).map(r => (typeof r === 'string' ? { sc: r, nombre: r } : r))))
     // Dónde se buscan transportistas hoy (lo administra Bigticket desde el Brain).

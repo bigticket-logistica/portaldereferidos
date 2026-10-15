@@ -3,6 +3,9 @@
 //
 //   /            acceso del referidor (ingresar o crear cuenta) y su panel
 //   /r/BT-XXXXX  invitación pública: el referido deja sus datos sin cuenta
+//   /c/camioneta postulación por un canal de Bigticket (la camioneta, un
+//                volante…): el referido queda registrado con ese canal y sin
+//                referidor, así que no genera bonos.
 //
 // Sin librería de rutas: son dos pantallas y se distinguen por la dirección.
 // ═══════════════════════════════════════════════════════════════════════════
@@ -16,6 +19,8 @@ export default function App() {
   const ruta = window.location.pathname
   const invitacion = ruta.match(/^\/r\/([A-Za-z0-9-]+)/)
   if (invitacion) return <Invitacion codigo={invitacion[1].toUpperCase()} />
+  const canal = ruta.match(/^\/c\/([A-Za-z0-9_-]+)/)
+  if (canal) return <Invitacion codigo={canal[1].toLowerCase()} canal />
   return <ZonaReferidor />
 }
 
