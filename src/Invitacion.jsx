@@ -3,9 +3,9 @@
 //
 //   1. ¿Puede facturar? Si no, se le agradece y no se registra nada.
 //   2. Elige el centro y sus vehículos, entre lo que busca Bigticket.
-//   3. Ve la propuesta económica de ese centro (tarifa por viaje y comentario,
-//      que el analista crea y edita en el Brain → Referidos → Oportunidades) y
-//      la acepta. Sin aceptarla no puede seguir.
+//   3. Ve la propuesta económica de ese centro (ref_propuestas, que el analista
+//      crea y edita en el Brain → Referidos → Oportunidades) y la acepta. Sin
+//      aceptarla no puede seguir. Un centro sin propuesta no aparece.
 //   4. Sus datos y sus documentos.
 //   5. Al enviar, fn_ref_registrar_referido crea su tarjeta en el Kanban de
 //      Certificaciones, ya en la Etapa 3 (Pre validación Biggy) y marcada como
@@ -16,8 +16,9 @@
 // ═══════════════════════════════════════════════════════════════════════════
 import { useEffect, useMemo, useState } from 'react'
 import { supabase, mensajeError } from './supabase'
-import { Campo, Logo, CURP_RE, RFC_RE, soloDigitos, pesos, TelefonoMX } from './comun'
+import { Campo, Logo, CURP_RE, RFC_RE, soloDigitos, TelefonoMX } from './comun'
 import { TipoBuscado } from './Panel'
+import PropuestaVista from './Propuesta'
 
 const BUCKET = 'documentos-terceros'
 const DOCS = [
@@ -48,7 +49,8 @@ export default function Invitacion({ codigo, canal = false }) {
   const carpeta = useMemo(() => (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())), [])
   const [quien, setQuien] = useState(undefined)        // nombre corto de quien invita
   const [scs, setScs] = useState([])
-  const [oport, setOport] = useState(null)              // lo que define el analista en el Brain
+  const [oportTodas, setOportTodas] = useState(null)    // lo que define el analista en el Brain
+  const [propuestas, setPropuestas] = useState(null)    // una propuesta económica por centro
   // factura → centro → propuesta → datos ('no' si no puede facturar)
   const [paso, setPaso] = useState('factura')
   const [aceptoProp, setAceptoProp] = useState(false)
@@ -69,12 +71,16 @@ export default function Invitacion({ codigo, canal = false }) {
     // Cada centro llega con su nombre: en la lista se ve "Playa del Carmen (SPY1)".
     supabase.rpc('fn_ref_scs').then(({ data }) => setScs((data || []).map(r => (typeof r === 'string' ? { sc: r, nombre: r } : r))))
     // Dónde se buscan transportistas hoy (lo administra Bigticket desde el Brain).
-    supabase.from('vw_ref_oportunidades').select('*').then(({ data }) => setOport(data || []))
+    supabase.from('vw_ref_oportunidades').select('*').then(({ data }) => setOportTodas(data || []))
+    supabase.from('ref_propuestas').select('*').then(({ data }) => setPropuestas(data || []))
   }, [codigo])
 
   // Centros y tipos de vehículo que define el analista en el Brain (Referidos →
   // Oportunidades). Si no hay ninguna campaña activa, no se recibe postulación:
   // se muestra un aviso, y la página se abre sola en cuanto se crea una.
+  // Solo se ofrecen los centros que ya tienen su propuesta económica.
+  const oport = oportTodas && propuestas ? oportTodas.filter(o => propuestas.some(p => p.sc === o.sc)) : null
+  const propActual = (propuestas || []).find(p => p.sc === d.sc)
   const hayOport = (oport || []).length > 0
   const centrosOpciones = hayOport
     ? Object.values((oport || []).reduce((m, o) => { m[o.sc] = m[o.sc] || { sc: o.sc, nombre: o.nombre }; return m }, {}))
@@ -90,7 +96,7 @@ export default function Invitacion({ codigo, canal = false }) {
   // Al cambiar de centro, cada vehículo queda con un tipo que ese centro busca.
   useEffect(() => {
     setVehiculos(v => v.map(t => (tipos.includes(t) ? t : tipos[0])))
-  }, [d.sc, oport])  // eslint-disable-line react-hooks/exhaustive-deps
+  }, [d.sc, oportTodas, propuestas])  // eslint-disable-line react-hooks/exhaustive-deps
 
   const cambiarCantidad = (n) => {
     const total = Math.max(1, Math.min(10, n))
@@ -131,6 +137,7 @@ export default function Invitacion({ codigo, canal = false }) {
   // Lo que se le paga en el centro elegido, solo por los tipos que eligió.
   const propuesta = buscadosEn(d.sc).filter(o => vehiculos.includes(o.tipo_vehiculo))
   const nombreCentro = (centrosOpciones.find(c => c.sc === d.sc) || {}).nombre || d.sc
+  const resumenVeh = Object.entries(vehiculos.reduce((m, t) => ({ ...m, [t]: (m[t] || 0) + 1 }), {})).map(([t, n]) => `${n} ${t}`).join(' y ')
 
   const irPropuesta = () => {
     if (!d.sc) { setErr({ sc: 'Elige dónde te gustaría operar.' }); return }
@@ -256,18 +263,8 @@ export default function Invitacion({ codigo, canal = false }) {
         ) : paso === 'propuesta' ? (
           <div className="form">
             <h2 className="form-t">Propuesta económica</h2>
-            <p className="form-p">Esto es lo que Bigticket paga en {nombreCentro} por los vehículos que elegiste. Léela antes de dejar tus datos.</p>
-            <div className="propuesta">
-              {propuesta.map(o => (
-                <div key={o.tipo_vehiculo} className="propuesta-item">
-                  <div className="propuesta-fila">
-                    <span className="chip-v">{vehiculos.filter(v => v === o.tipo_vehiculo).length} {o.tipo_vehiculo}</span>
-                    <span className="propuesta-tarifa"><b>{pesos(o.tarifa)}</b> por viaje</span>
-                  </div>
-                  {o.nota && <p className="propuesta-nota">{o.nota}</p>}
-                </div>
-              ))}
-            </div>
+            <p className="form-p">Estas son las condiciones para operar en {nombreCentro} con {resumenVeh}. Léelas antes de dejar tus datos.</p>
+            {propActual && <PropuestaVista p={propActual} />}
             <label className="check">
               <input type="checkbox" checked={aceptoProp} onChange={e => setAceptoProp(e.target.checked)} />
               <span>Leí la propuesta económica y estoy de acuerdo con estas condiciones.</span>
@@ -283,7 +280,7 @@ export default function Invitacion({ codigo, canal = false }) {
 
             <div className="nota-caja">
               <span className="nota-i">i</span>
-              <span>Operarías en <b>{nombreCentro}</b> con {propuesta.map(o => `${vehiculos.filter(v => v === o.tipo_vehiculo).length} ${o.tipo_vehiculo} a ${pesos(o.tarifa)} por viaje`).join(' y ')}. <a href="#" onClick={e => { e.preventDefault(); cambiarCentro() }}>Cambiar</a></span>
+              <span>Operarías en <b>{nombreCentro}</b> con {resumenVeh}, y aceptaste la propuesta económica de este centro. <a href="#" onClick={e => { e.preventDefault(); cambiarCentro() }}>Cambiar</a></span>
             </div>
 
             <fieldset className="bloque">
