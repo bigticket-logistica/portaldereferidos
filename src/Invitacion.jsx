@@ -2,8 +2,12 @@
 // Invitación pública (/r/BT-XXXXX): la postulación completa del referido.
 //
 //   1. ¿Puede facturar? Si no, se le agradece y no se registra nada.
-//   2. Sus datos, sus vehículos y sus documentos.
-//   3. Al enviar, fn_ref_registrar_referido crea su tarjeta en el Kanban de
+//   2. Elige el centro y sus vehículos, entre lo que busca Bigticket.
+//   3. Ve la propuesta económica de ese centro (tarifa por viaje y comentario,
+//      que el analista crea y edita en el Brain → Referidos → Oportunidades) y
+//      la acepta. Sin aceptarla no puede seguir.
+//   4. Sus datos y sus documentos.
+//   5. Al enviar, fn_ref_registrar_referido crea su tarjeta en el Kanban de
 //      Certificaciones, ya en la Etapa 3 (Pre validación Biggy) y marcada como
 //      referido, y la ata a quien lo invitó.
 //
@@ -12,7 +16,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 import { useEffect, useMemo, useState } from 'react'
 import { supabase, mensajeError } from './supabase'
-import { Campo, Logo, CURP_RE, RFC_RE, soloDigitos, TelefonoMX } from './comun'
+import { Campo, Logo, CURP_RE, RFC_RE, soloDigitos, pesos, TelefonoMX } from './comun'
 import { TipoBuscado } from './Panel'
 
 const BUCKET = 'documentos-terceros'
@@ -45,7 +49,9 @@ export default function Invitacion({ codigo, canal = false }) {
   const [quien, setQuien] = useState(undefined)        // nombre corto de quien invita
   const [scs, setScs] = useState([])
   const [oport, setOport] = useState(null)              // lo que define el analista en el Brain
-  const [factura, setFactura] = useState(null)         // null: sin responder · true · false
+  // factura → centro → propuesta → datos ('no' si no puede facturar)
+  const [paso, setPaso] = useState('factura')
+  const [aceptoProp, setAceptoProp] = useState(false)
   const [d, setD] = useState({ nombre: '', empresa: '', curp: '', rfc: '', ine: '', sc: '', correo: '', telefono: '', acepto: false })
   const [vehiculos, setVehiculos] = useState(['Small Van'])
   const [docs, setDocs] = useState({})                 // k → { url, nombre } | { subiendo: true } | { error }
@@ -113,7 +119,6 @@ export default function Invitacion({ codigo, canal = false }) {
     if (!CURP_RE.test(d.curp)) e.curp = 'Son 18 caracteres.'
     if (!RFC_RE.test(d.rfc) || (rfcLen !== 12 && rfcLen !== 13)) e.rfc = '12 caracteres si es empresa, 13 si es persona física.'
     if (!/^[A-Z0-9]{10,18}$/.test(d.ine)) e.ine = 'El número que aparece al reverso de tu INE.'
-    if (!d.sc) e.sc = 'Elige dónde te gustaría operar.'
     if (!/^\S+@\S+\.\S+$/.test(d.correo.trim())) e.correo = 'Revisa el correo.'
     if (soloDigitos(d.telefono).length !== 10) e.telefono = 'Son 10 dígitos, sin el 52.'
     for (const doc of DOCS) if (doc.req && !docs[doc.k]?.url) e[`doc_${doc.k}`] = 'Falta este documento.'
@@ -122,6 +127,17 @@ export default function Invitacion({ codigo, canal = false }) {
     if (Object.keys(e).length) setGeneral('Revisa los campos marcados en rojo.')
     return Object.keys(e).length === 0
   }
+
+  // Lo que se le paga en el centro elegido, solo por los tipos que eligió.
+  const propuesta = buscadosEn(d.sc).filter(o => vehiculos.includes(o.tipo_vehiculo))
+  const nombreCentro = (centrosOpciones.find(c => c.sc === d.sc) || {}).nombre || d.sc
+
+  const irPropuesta = () => {
+    if (!d.sc) { setErr({ sc: 'Elige dónde te gustaría operar.' }); return }
+    setErr({}); setAceptoProp(false); setPaso('propuesta'); window.scrollTo(0, 0)
+  }
+  const aceptarPropuesta = () => { setPaso('datos'); window.scrollTo(0, 0) }
+  const cambiarCentro = () => { setAceptoProp(false); setPaso('centro'); window.scrollTo(0, 0) }
 
   const enviar = async (ev) => {
     ev.preventDefault(); setGeneral('')
@@ -139,6 +155,9 @@ export default function Invitacion({ codigo, canal = false }) {
         vehiculos,
         url_curp: docs.curp?.url, url_ine: docs.ine?.url, url_ine_2: docs.ine_2?.url,
         url_rfc: docs.rfc?.url, url_licencia: docs.licencia?.url || null,
+        // La propuesta que vio y aceptó (la función guarda su copia desde ref_oportunidades).
+        propuesta_aceptada: true,
+        propuesta: propuesta.map(o => ({ tipo_vehiculo: o.tipo_vehiculo, tarifa: o.tarifa, nota: o.nota || null })),
       },
     })
     setBusy(false)
@@ -176,46 +195,25 @@ export default function Invitacion({ codigo, canal = false }) {
             <h2 className="form-t">¡Listo, recibimos tu postulación!</h2>
             <p className="form-p">Nuestro equipo revisará tus documentos y un supervisor de Bigticket te contactará por WhatsApp al {soloDigitos(d.telefono)} con los siguientes pasos.</p>
           </div>
-        ) : factura === false ? (
+        ) : paso === 'no' ? (
           <div className="form">
             <h2 className="form-t">Gracias por tu interés</h2>
             <p className="form-p">Por ahora trabajamos solo con transportistas que pueden emitir factura: empresas (persona moral) o personas físicas con actividad empresarial. Cuando te des de alta en el SAT para facturar, vuelve a abrir esta invitación.</p>
-            <button className="btn sec" onClick={() => setFactura(null)}>Volver</button>
+            <button className="btn sec" onClick={() => setPaso('factura')}>Volver</button>
           </div>
-        ) : factura === null ? (
+        ) : paso === 'factura' ? (
           <div className="form">
             <h2 className="form-t">¿Puedes emitir factura?</h2>
             <p className="form-p">Para operar con Bigticket necesitas facturar tus servicios, como empresa (persona moral) o como persona física con actividad empresarial.</p>
             <div className="opciones">
-              <button className="btn" onClick={() => setFactura(true)}>Sí, puedo facturar</button>
-              <button className="btn sec" onClick={() => setFactura(false)}>No, todavía no</button>
+              <button className="btn" onClick={() => setPaso('centro')}>Sí, puedo facturar</button>
+              <button className="btn sec" onClick={() => setPaso('no')}>No, todavía no</button>
             </div>
           </div>
-        ) : (
-          <form onSubmit={enviar} className="form" noValidate>
-            <h2 className="form-t">Tu postulación</h2>
-
-            <fieldset className="bloque">
-              <legend>Tus datos</legend>
-              <Campo label="Nombre completo" error={err.nombre}><input value={d.nombre} onChange={e => S('nombre', e.target.value)} autoComplete="name" /></Campo>
-              <Campo label="Nombre de la empresa" error={err.empresa} ayuda="Razón social, o tu nombre si facturas como persona física.">
-                <input value={d.empresa} onChange={e => S('empresa', e.target.value)} autoComplete="organization" />
-              </Campo>
-              <div className="dos">
-                <Campo label="CURP" error={err.curp}><input className="mono" value={d.curp} onChange={e => S('curp', e.target.value.toUpperCase().replace(/\s/g, '').slice(0, 18))} /></Campo>
-                <Campo label="RFC con homoclave" error={err.rfc}><input className="mono" value={d.rfc} onChange={e => S('rfc', e.target.value.toUpperCase().replace(/\s/g, '').slice(0, 13))} /></Campo>
-              </div>
-              <Campo label="Número de INE" error={err.ine} ayuda="El número que aparece al reverso de tu credencial.">
-                <input className="mono" value={d.ine} onChange={e => S('ine', e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 18))} />
-              </Campo>
-              <div className="dos">
-                <Campo label="Correo" error={err.correo}><input type="email" value={d.correo} onChange={e => S('correo', e.target.value)} autoComplete="email" /></Campo>
-                <Campo label="Teléfono celular" error={err.telefono} ayuda="10 dígitos, para WhatsApp.">
-                  <TelefonoMX value={d.telefono} onChange={v => S('telefono', v)} />
-                </Campo>
-              </div>
-            </fieldset>
-
+        ) : paso === 'centro' ? (
+          <div className="form">
+            <h2 className="form-t">¿Dónde te gustaría operar?</h2>
+            <p className="form-p">Elige el centro y los vehículos con los que operarías. En el siguiente paso verás cuánto se paga.</p>
             <fieldset className="bloque">
               <legend>Tu operación</legend>
               <Campo label="¿En qué centro te gustaría operar?" error={err.sc}>
@@ -251,6 +249,61 @@ export default function Invitacion({ codigo, canal = false }) {
                     </div>
                   </div>
                 ))}
+              </div>
+            </fieldset>
+            <button className="btn" onClick={irPropuesta}>Ver la propuesta económica</button>
+          </div>
+        ) : paso === 'propuesta' ? (
+          <div className="form">
+            <h2 className="form-t">Propuesta económica</h2>
+            <p className="form-p">Esto es lo que Bigticket paga en {nombreCentro} por los vehículos que elegiste. Léela antes de dejar tus datos.</p>
+            <div className="propuesta">
+              {propuesta.map(o => (
+                <div key={o.tipo_vehiculo} className="propuesta-item">
+                  <div className="propuesta-fila">
+                    <span className="chip-v">{vehiculos.filter(v => v === o.tipo_vehiculo).length} {o.tipo_vehiculo}</span>
+                    <span className="propuesta-tarifa"><b>{pesos(o.tarifa)}</b> por viaje</span>
+                  </div>
+                  {o.nota && <p className="propuesta-nota">{o.nota}</p>}
+                </div>
+              ))}
+            </div>
+            <label className="check">
+              <input type="checkbox" checked={aceptoProp} onChange={e => setAceptoProp(e.target.checked)} />
+              <span>Leí la propuesta económica y estoy de acuerdo con estas condiciones.</span>
+            </label>
+            <div className="opciones">
+              <button className="btn" disabled={!aceptoProp} onClick={aceptarPropuesta}>Aceptar y continuar</button>
+              <button className="btn sec" onClick={cambiarCentro}>Cambiar centro o vehículos</button>
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={enviar} className="form" noValidate>
+            <h2 className="form-t">Tu postulación</h2>
+
+            <div className="nota-caja">
+              <span className="nota-i">i</span>
+              <span>Operarías en <b>{nombreCentro}</b> con {propuesta.map(o => `${vehiculos.filter(v => v === o.tipo_vehiculo).length} ${o.tipo_vehiculo} a ${pesos(o.tarifa)} por viaje`).join(' y ')}. <a href="#" onClick={e => { e.preventDefault(); cambiarCentro() }}>Cambiar</a></span>
+            </div>
+
+            <fieldset className="bloque">
+              <legend>Tus datos</legend>
+              <Campo label="Nombre completo" error={err.nombre}><input value={d.nombre} onChange={e => S('nombre', e.target.value)} autoComplete="name" /></Campo>
+              <Campo label="Nombre de la empresa" error={err.empresa} ayuda="Razón social, o tu nombre si facturas como persona física.">
+                <input value={d.empresa} onChange={e => S('empresa', e.target.value)} autoComplete="organization" />
+              </Campo>
+              <div className="dos">
+                <Campo label="CURP" error={err.curp}><input className="mono" value={d.curp} onChange={e => S('curp', e.target.value.toUpperCase().replace(/\s/g, '').slice(0, 18))} /></Campo>
+                <Campo label="RFC con homoclave" error={err.rfc}><input className="mono" value={d.rfc} onChange={e => S('rfc', e.target.value.toUpperCase().replace(/\s/g, '').slice(0, 13))} /></Campo>
+              </div>
+              <Campo label="Número de INE" error={err.ine} ayuda="El número que aparece al reverso de tu credencial.">
+                <input className="mono" value={d.ine} onChange={e => S('ine', e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 18))} />
+              </Campo>
+              <div className="dos">
+                <Campo label="Correo" error={err.correo}><input type="email" value={d.correo} onChange={e => S('correo', e.target.value)} autoComplete="email" /></Campo>
+                <Campo label="Teléfono celular" error={err.telefono} ayuda="10 dígitos, para WhatsApp.">
+                  <TelefonoMX value={d.telefono} onChange={v => S('telefono', v)} />
+                </Campo>
               </div>
             </fieldset>
 

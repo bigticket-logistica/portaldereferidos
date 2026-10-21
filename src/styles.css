@@ -443,3 +443,11 @@ button, input { font: inherit; }
 .tipo-b-nota { margin: 0; font-size: 12.5px; line-height: 1.4; color: var(--muted); text-align: right; }
 .oport-tipos.izq .tipo-b-nota { text-align: left; }
 .buscados > .oport-tipos { display: flex; }
+
+/* Propuesta económica de la postulación (tarifa y comentario vienen del Brain) */
+.propuesta { display: flex; flex-direction: column; gap: 10px; }
+.propuesta-item { border: 1px solid var(--line); border-radius: 12px; padding: 14px; background: #fff; }
+.propuesta-fila { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.propuesta-tarifa { font-size: 13px; color: var(--muted); white-space: nowrap; }
+.propuesta-tarifa b { font-family: var(--font-display); font-weight: 800; font-size: 22px; color: var(--navy); letter-spacing: -.4px; }
+.propuesta-nota { margin: 8px 0 0; font-size: 13.5px; line-height: 1.45; color: var(--ink); }
