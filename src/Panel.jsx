@@ -245,7 +245,7 @@ export function TipoBuscado({ t }) {
   return (
     <div className="tipo-b">
       <div className="tipo-b-fila">
-        <span className="chip-v"><b>{t.cantidad}</b> {t.tipo_vehiculo}</span>
+        <span className="chip-v">{t.cantidad > 0 && <b>{t.cantidad}</b>} {t.tipo_vehiculo}</span>
         {Number(t.tarifa) > 0 && <span className="tipo-b-tarifa"><b>{pesos(t.tarifa)}</b> por viaje</span>}
       </div>
       {t.nota && <p className="tipo-b-nota">{t.nota}</p>}

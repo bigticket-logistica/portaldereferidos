@@ -79,7 +79,17 @@ export default function Invitacion({ codigo, canal = false }) {
   // Oportunidades). Si no hay ninguna campaña activa, no se recibe postulación:
   // se muestra un aviso, y la página se abre sola en cuanto se crea una.
   // Solo se ofrecen los centros que ya tienen su propuesta económica.
-  const oport = oportTodas && propuestas ? oportTodas.filter(o => propuestas.some(p => p.sc === o.sc)) : null
+  // Los tipos de vehículo de un centro son los de sus oportunidades más los que
+  // estén en la tabla de tarifas de su propuesta (con la tarifa de 0-100 km).
+  const numero = (v) => Number(String(v ?? '').replace(/\D/g, '')) || null
+  const oport = oportTodas && propuestas ? oportTodas.filter(o => propuestas.some(p => p.sc === o.sc)).concat(
+    propuestas.flatMap(p => {
+      const delCentro = oportTodas.filter(o => o.sc === p.sc)
+      if (!delCentro.length) return []
+      return (p.tarifas || [])
+        .filter(t => (t.categoria || '').trim() && !delCentro.some(o => o.tipo_vehiculo.toLowerCase() === t.categoria.trim().toLowerCase()))
+        .map(t => ({ sc: p.sc, nombre: delCentro[0].nombre, tipo_vehiculo: t.categoria.trim(), cantidad: null, tarifa: numero(t.tramos?.['0-100']), nota: null }))
+    })) : null
   const propActual = (propuestas || []).find(p => p.sc === d.sc)
   const hayOport = (oport || []).length > 0
   const centrosOpciones = hayOport
