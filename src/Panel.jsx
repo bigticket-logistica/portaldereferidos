@@ -295,22 +295,24 @@ function MiCodigo({ codigo, nombre }) {
   }, [linkQr])
 
   // Mensaje de la maqueta de WhatsApp (los *asteriscos* son negrita en WhatsApp).
+  // Los emojis van como códigos \u{…} para que no se pierdan si el archivo se guarda
+  // con otra codificación: 👋 🚐 👇 📲 ✅ 🚀.
   const mensaje = [
-    '¡Hola! 👋 Te cuento rápido:',
+    '¡Hola! \u{1F44B} Te cuento rápido:',
     '',
-    '🚐 *Bigticket* reparte para Mercado Libre y está sumando *unidades para paquetería última milla*',
+    '\u{1F690} *Bigticket* reparte para Mercado Libre y está sumando *unidades para paquetería última milla*',
     '',
     'Pagan semanal, sin atrasos y con buenas tarifas',
     '',
-    'Si te interesa (o conoces a alguien), regístrate aquí 👇',
+    'Si te interesa (o conoces a alguien), regístrate aquí \u{1F447}',
     '',
-    `📲 ${link}`,
+    `\u{1F4F2} ${link}`,
     '',
-    '✅ Te llaman en menos de 24 horas',
+    '\u2705 Te llaman en menos de 24 horas',
     '',
-    '¡Cualquier duda me dices! 🙌',
+    'Pásalo a quien le pueda servir \u{1F680}',
   ].join('\n')
-  const whatsapp = () => window.open(`https://wa.me/?text=${encodeURIComponent(mensaje)}`, '_blank')
+  const whatsapp = () => window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(mensaje)}`, '_blank')  // wa.me rompe los emojis en WhatsApp Web
   const copiar = async () => {
     try { await navigator.clipboard.writeText(link); setCopiado(true); setTimeout(() => setCopiado(false), 1800) } catch { /* sin portapapeles */ }
   }
