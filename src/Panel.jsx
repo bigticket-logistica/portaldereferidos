@@ -88,7 +88,7 @@ export default function Panel({ session }) {
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0" />
             </svg>
-            {avisos.length > 0 && <span className="app-badge">{avisos.length}</span>}
+            {avisos.length > 0 && (vista === 'qr' ? <span className="app-punto" /> : <span className="app-badge">{avisos.length}</span>)}
           </button>}
         </div>
         {vista === 'inicio' && (
@@ -127,13 +127,14 @@ export default function Panel({ session }) {
   )
 }
 
-const ICO = (d) => `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`
+// Íconos de la barra inferior (maqueta): línea estilo Lucide, 24 × 24, trazo 0.83.
+const ICO = (d) => `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="0.83" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`
 const PESTANAS = [
-  { k: 'inicio', t: 'Inicio', svg: ICO('<path d="M3 10a2 2 0 0 1 .7-1.53l7-6a2 2 0 0 1 2.6 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><path d="M10 21v-5a2 2 0 0 1 4 0v5"/>') },
-  { k: 'qr', t: 'Mi QR', svg: ICO('<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 17h4v4"/>') },
-  { k: 'referidos', t: 'Referidos', svg: ICO('<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>') },
-  { k: 'pagos', t: 'Pagos', svg: ICO('<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/><path d="M6 15h4"/>') },
-  { k: 'cuenta', t: 'Cuenta', svg: ICO('<path d="M3 21h18"/><path d="M5 21V10M19 21V10M9 21V10M15 21V10"/><path d="M12 3 3 8h18Z"/>') },
+  { k: 'inicio', t: 'Inicio', svg: ICO('<path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/>') },
+  { k: 'qr', t: 'Mi QR', svg: ICO('<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM21 14v3M17 21h4v-1"/>') },
+  { k: 'referidos', t: 'Referidos', svg: ICO('<circle cx="9" cy="8" r="4"/><path d="M2 21v-1a6 6 0 0 1 12 0v1"/><path d="M16 4.5a4 4 0 0 1 0 7"/><path d="M22 21v-1a6 6 0 0 0-4-5.6"/>') },
+  { k: 'pagos', t: 'Pagos', svg: ICO('<circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 18V6"/>') },
+  { k: 'cuenta', t: 'Cuenta', svg: ICO('<path d="M3 21h18"/><path d="M4 10h16"/><path d="M12 3 3 8h18z"/><path d="M6 10v8M10 10v8M14 10v8M18 10v8"/>') },
 ]
 
 // Grupos de etapas para los contadores del Inicio.
@@ -296,37 +297,55 @@ function MiCodigo({ codigo, nombre }) {
   const mensaje = `Hola. Bigticket busca transportistas que facturen para rutas de última milla con Mercado Libre: pagos semanales por ruta. Postúlate con mi invitación: ${link}`
   const whatsapp = () => window.open(`https://wa.me/?text=${encodeURIComponent(mensaje)}`, '_blank')
   const copiar = async () => {
-    try { await navigator.clipboard.writeText(link); setCopiado(true); setTimeout(() => setCopiado(false), 2000) } catch { /* sin portapapeles */ }
+    try { await navigator.clipboard.writeText(link); setCopiado(true); setTimeout(() => setCopiado(false), 1800) } catch { /* sin portapapeles */ }
+  }
+  // Descargar: PNG con el QR, el nombre y el código (como la tarjeta).
+  const descargar = async () => {
+    if (!qr) return
+    const img = new Image(); img.src = qr
+    await img.decode()
+    const W = 900, c = document.createElement('canvas'); c.width = W; c.height = 1080
+    const g = c.getContext('2d')
+    g.fillStyle = '#fff'; g.fillRect(0, 0, W, c.height)
+    g.strokeStyle = '#002E5D'; g.lineWidth = 6
+    const x = 110, y = 90, s = 680
+    g.beginPath(); g.roundRect(x - 30, y - 30, s + 60, s + 60, 48); g.stroke()
+    g.drawImage(img, x, y, s, s)
+    g.textAlign = 'center'; g.fillStyle = '#002E5D'; g.font = '600 52px Poppins, sans-serif'
+    g.fillText(nombre, W / 2, 920)
+    g.fillStyle = '#545454'; g.font = '400 36px "Open Sans", sans-serif'
+    g.fillText(`Código ${codigo} · único para ti`, W / 2, 980)
+    const a = document.createElement('a'); a.href = c.toDataURL('image/png'); a.download = `QR-${codigo}.png`; a.click()
   }
 
   return (
-    <>
-      <section className="tarjeta qr-tarjeta">
-        <div className="qr-marco">{qr ? <img src={qr} alt={`Código QR de la invitación ${codigo}`} /> : <span className="spin" />}</div>
-        <b className="qr-nombre">{nombre}</b>
-        <span className="qr-codigo">Código {codigo} · único para ti</span>
+    <div className="qr-pantalla">
+      <p className="qr-intro">Este es tu QR. Quien lo escanee queda a tu nombre.</p>
+      <section className="qr-card">
+        <div className="qr-frame">{qr ? <img src={qr} alt={`Código QR de la invitación ${codigo}`} /> : <span className="spin" />}</div>
+        <b className="qr-owner">{nombre}</b>
+        <span className="qr-code">Código {codigo} · único para ti</span>
       </section>
-      <button className="btn ancho con-ico" onClick={whatsapp}>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4" /></svg>
+      <button className="qr-share" onClick={whatsapp}>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4" /></svg>
         Compartir por WhatsApp
       </button>
-      <div className="dos-botones">
-        {qr && (
-          <a className="btn sec con-ico" href={qr} download={`QR-${codigo}.png`}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" /></svg>
-            Descargar
-          </a>
-        )}
-        <button className="btn sec con-ico" onClick={copiar}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
-          {copiado ? 'Copiado' : 'Copiar link'}
+      <div className="qr-actions">
+        <button className="qr-btn" onClick={descargar} disabled={!qr}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 15V3M7 10l5 5 5-5M5 21h14" /></svg>
+          Descargar
+        </button>
+        <button className="qr-btn" onClick={copiar}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
+          Copiar link
         </button>
       </div>
-      <div className="nota-caja">
-        <span className="nota-i">i</span>
-        <span>Quien se postule con este QR o este link queda registrado a tu nombre. La invitación ya va escrita: solo eliges a quién mandarla.</span>
+      <div className="qr-note">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" /></svg>
+        <span>Cada registro con tu QR o link queda a tu nombre. El mensaje de WhatsApp ya va listo: solo elige a quién enviarlo.</span>
       </div>
-    </>
+      {copiado && <div className="qr-toast" role="status">Link copiado</div>}
+    </div>
   )
 }
 

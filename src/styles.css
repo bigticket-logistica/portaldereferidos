@@ -501,3 +501,32 @@ body.rules-open { overflow: hidden; }
 .rules-continue { width: 100%; height: 54px; border: 0; border-radius: 14px; background: #FF6600; color: #fff; font: 600 17px Poppins, var(--font); cursor: pointer; }
 .rules-continue:hover { background: #E65C00; }
 .rules-continue:disabled { background: #DADDE3; color: #6B6F76; cursor: not-allowed; }
+
+/* ── Barra inferior (maqueta "Íconos de la barra inferior") ── */
+.app-tabs { background: #fff; backdrop-filter: none; border-top: 1px solid #E3E3E3; padding: 6px 8px calc(16px + env(safe-area-inset-bottom, 0px)); }
+.app-tab { gap: 4px; padding: 0; color: #6B6F76; font: 600 13px 'Open Sans', var(--font); }
+.app-tab-ico { width: 56px; height: 36px; border-radius: 12px; border: 1px solid transparent; color: #8B8B8B; display: flex; align-items: center; justify-content: center; background: none;
+  transition: transform .18s, box-shadow .18s, border-color .18s, color .18s; }
+.app-tab-ico svg { width: 28px; height: 28px; }
+.app-tab:hover .app-tab-ico { border-color: #FF6600; color: #FF6600; box-shadow: 0 6px 14px rgba(255,102,0,.22); transform: translateY(-2px) scale(1.08); }
+.app-tab.on { color: #002E5D; font-weight: 700; }
+.app-tab.on .app-tab-ico { border-color: #FF6600; color: #FF6600; background: #fff; box-shadow: 0 2px 8px rgba(255,102,0,.16); }
+.app-tab.on::before { content: none; }
+
+/* ── Mi QR personal (maqueta pantalla 2b) ── */
+.app-punto { position: absolute; top: 9px; right: 9px; width: 9px; height: 9px; border-radius: 50%; background: #FF6600; border: 2px solid #0A386A; }
+.qr-pantalla { display: flex; flex-direction: column; gap: 12px; }
+.qr-intro { padding: 4px 12px 0; margin: 0; text-align: center; font: 400 17px/24px 'Open Sans', var(--font); color: #363739; text-wrap: pretty; }
+.qr-card { background: #fff; border-radius: 22px; padding: 16px; box-shadow: 0 1px 3px rgba(0,46,93,.12); display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.qr-frame { padding: 12px; border: 2px solid #002E5D; border-radius: 18px; }
+.qr-frame img, .qr-frame .spin { width: 190px; height: 190px; display: block; }
+.qr-owner { font: 600 19px/26px Poppins, var(--font); color: #002E5D; }
+.qr-code { font: 400 14px 'Open Sans', var(--font); color: #545454; margin-top: -8px; }
+.qr-share { height: 62px; border: 0; border-radius: 14px; background: #FF6600; color: #fff; font: 600 19px Poppins, var(--font); display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; width: 100%; }
+.qr-share:hover { background: #E65C00; }
+.qr-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.qr-btn { height: 52px; border: 1.5px solid #002E5D; border-radius: 14px; background: #fff; color: #002E5D; font: 600 15px Poppins, var(--font); display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; }
+.qr-btn:disabled { opacity: .5; cursor: default; }
+.qr-note { display: flex; gap: 10px; padding: 14px 16px; border-radius: 16px; background: #fff; box-shadow: 0 1px 3px rgba(0,46,93,.12); font: 400 15px/21px 'Open Sans', var(--font); color: #363739; }
+.qr-note svg { stroke: #FF6600; flex-shrink: 0; }
+.qr-toast { position: fixed; left: 24px; right: 24px; bottom: 96px; z-index: 30; background: #002E5D; color: #fff; border-radius: 12px; padding: 12px 16px; font: 600 14px 'Open Sans', var(--font); text-align: center; max-width: 480px; margin: 0 auto; }
