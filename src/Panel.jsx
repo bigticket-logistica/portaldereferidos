@@ -168,7 +168,7 @@ function armarAvisos(perfil, referidos, premios) {
 
   for (const r of referidos) {
     if (r.etapa === 'firma_contrato') a.push({ tipo: 'avance', t: `${corto(r)}: firma de contrato`, ir: 'referidos' })
-    else if (r.etapa === 'entrevista_alta') a.push({ tipo: 'avance', t: `${corto(r)}: entrevista y alta`, ir: 'referidos' })
+    else if (r.etapa === 'entrevista_alta') a.push({ tipo: 'avance', t: `${corto(r)}: solicitud de alta`, ir: 'referidos' })
     else if (r.etapa === 'primera_ruta') a.push({ tipo: 'avance', t: `${corto(r)}: ${r.rutas_30} de 15 rutas`, ir: 'referidos' })
   }
   return a.slice(0, 5)
@@ -337,7 +337,7 @@ function etapaDe(r) {
   const T = {
     registrado: { pill: 'REGISTRADO', tono: 'gris', texto: 'Recibimos su postulación. Un supervisor lo contactará en menos de 24 horas.' },
     en_revision: { pill: 'EN REVISIÓN', tono: 'naranja', texto: 'Estamos revisando sus documentos y validándolo con Mercado Libre.' },
-    entrevista_alta: { pill: 'ENTREVISTA', tono: 'azul', texto: 'Tiene entrevista con Operaciones. Recuérdale llevar su INE, su licencia y la tarjeta de circulación.' },
+    entrevista_alta: { pill: 'SOLICITUD DE ALTA', tono: 'azul', texto: 'Ya pasó la revisión de documentos. Estamos solicitando su alta para que pueda operar.' },
     firma_contrato: { pill: 'FIRMA', tono: 'azul', texto: 'Le enviamos su contrato. Recuérdale firmarlo para que pueda empezar a rutear.' },
     contrato_firmado: { pill: 'CONTRATO FIRMADO', tono: 'azul', texto: 'Ya firmó. Con su primera ruta ganas tus primeros $500.' },
     primera_ruta: { pill: 'EN RUTA', tono: 'navy', texto: null },
@@ -404,7 +404,7 @@ function Detalle({ r, premios }) {
   const pasos = [
     { t: 'Registro', d: `${fechaCorta(r.creado_at)} · con tu QR`, ok: true },
     { t: 'Revisión de documentos', d: i > 1 ? 'Documentos validados' : 'Revisamos sus documentos con Mercado Libre', ok: i > 1, cur: i === 1 },
-    { t: 'Entrevista y alta', d: i > 2 ? 'Entrevista aprobada' : 'Con un supervisor de Operaciones', ok: i > 2, cur: i === 2 },
+    { t: 'Solicitud de alta', d: i > 2 ? 'Alta aprobada' : 'Solicitamos su alta para que pueda operar', ok: i > 2, cur: i === 2 },
     { t: 'Contrato firmado', d: r.firmado_at ? fechaCorta(r.firmado_at) : 'Le enviaremos su contrato para firmar', ok: !!r.firmado_at, cur: i === 3 },
     { t: 'Primera ruta', d: r.primera_ruta ? `${fechaCorta(r.primera_ruta)} · $500${p1 ? ` ${ESTADO[p1.estado]}` : ''}` : 'Con su primera ruta ganas $500', ok: !!r.primera_ruta, cur: i === 4 },
     { t: '30 días activo', d: r.etapa === 'primera_ruta' ? `Va en el día ${dias}. Se cumple el ${fechaCorta(cumple)}.` : r.etapa === 'quince_rutas' ? 'Completado' : r.etapa === 'sin_meta_30_dias' ? 'No llegó a 15 rutas' : 'Se cuentan desde su primera ruta', ok: r.etapa === 'quince_rutas', cur: r.etapa === 'primera_ruta', mal: r.etapa === 'sin_meta_30_dias' },
