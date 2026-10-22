@@ -8,6 +8,7 @@
 import { useEffect, useState } from 'react'
 import { supabase, mensajeError } from './supabase'
 import { Campo, Clave, Logo, CURP_RE, soloDigitos, TelefonoMX } from './comun'
+import { LinkReglas, PantallaReglas } from './Reglas'
 
 export default function Acceso({ recuperando, onListo, onRecuperando }) {
   // Se abre en la inscripción, como la maqueta: la mayoría llega a inscribirse.
@@ -72,6 +73,8 @@ function Registro({ onYaTengo }) {
   const [general, setGeneral] = useState('')
   const [busy, setBusy] = useState(false)
   const [enviado, setEnviado] = useState(false)
+  // Después del formulario se muestran las reglas (pantalla 7) y hay que aceptarlas.
+  const [verReglas, setVerReglas] = useState(false)
   const S = (k, v) => setD(x => ({ ...x, [k]: v }))
 
   const validar = () => {
@@ -86,21 +89,25 @@ function Registro({ onYaTengo }) {
     return Object.keys(e).length === 0
   }
 
-  const crear = async (ev) => {
+  const irReglas = (ev) => {
     ev.preventDefault(); setGeneral('')
-    if (!validar()) return
+    if (validar()) setVerReglas(true)
+  }
+
+  const crear = async (aceptadas) => {
+    setGeneral('')
     setBusy(true)
-    const datos = { nombre: d.nombre.trim(), curp: d.curp, telefono: soloDigitos(d.telefono) }
+    const datos = { nombre: d.nombre.trim(), curp: d.curp, telefono: soloDigitos(d.telefono), reglas_aceptadas_at: aceptadas }
     const { data, error } = await supabase.auth.signUp({
       email: d.correo.trim().toLowerCase(), password: d.clave,
       options: { data: { referidor: datos }, emailRedirectTo: window.location.origin },
     })
-    if (error) { setBusy(false); setGeneral(mensajeError(error)); return }
+    if (error) { setBusy(false); setGeneral(mensajeError(error)); setVerReglas(false); return }
     if (data.session) {
       // Sin confirmación de correo: la cuenta de referidor se crea en el acto.
       const { error: e2 } = await supabase.rpc('fn_ref_crear_referidor', { p_nombre: datos.nombre, p_curp: datos.curp, p_telefono: datos.telefono })
       setBusy(false)
-      if (e2) setGeneral(mensajeError(e2))
+      if (e2) { setGeneral(mensajeError(e2)); setVerReglas(false) }
       return
     }
     setBusy(false); setEnviado(true)
@@ -113,8 +120,10 @@ function Registro({ onYaTengo }) {
     </div>
   )
 
+  if (verReglas) return <PantallaReglas busy={busy} onVolver={() => setVerReglas(false)} onContinuar={crear} />
+
   return (
-    <form onSubmit={crear} className="form" noValidate>
+    <form onSubmit={irReglas} className="form" noValidate>
       <h2 className="form-t">Inscríbete y recibe tu QR</h2>
       <button type="button" className="aviso-cuenta-bt" onClick={onYaTengo}>
         <b>¿Ya tienes cuenta en el Portal del Transportista?</b> No te inscribas de nuevo: entra con el mismo correo y la misma contraseña. ›
@@ -137,30 +146,9 @@ function Registro({ onYaTengo }) {
         <button type="button" onClick={onYaTengo}>Entra aquí ›</button></div>
       <div className="nota-caja">
         <span className="nota-i">i</span>
-        <span>No necesitas trabajar con Bigticket. Al inscribirte aceptas las{' '}
-          <a href="#condiciones" onClick={e => { e.preventDefault(); document.getElementById('condiciones')?.showModal() }}>reglas del programa</a>
-          {' '}y el uso de tus datos. No participa el personal de Bigticket.</span>
+        <span>No necesitas trabajar con BigTicket. Al inscribirte aceptas las <LinkReglas />.</span>
       </div>
-      <Condiciones />
     </form>
-  )
-}
-
-// Las condiciones en una ventana, para leerlas sin salir del registro.
-export function Condiciones() {
-  return (
-    <dialog id="condiciones" className="dialogo">
-      <h2>Condiciones del programa de referidos</h2>
-      <ul>
-        <li>Pueden participar choferes, empresas y cualquier persona mayor de edad, excepto trabajadores de Bigticket.</li>
-        <li>Solo cuentan referidos que puedan facturar a Bigticket: personas morales o personas físicas con actividad empresarial, con RFC. Un RFC se puede referir una sola vez; vale la primera invitación con la que se registra.</li>
-        <li>No cuentan los RFC que ya trabajan con Bigticket, ni referirte a ti mismo.</li>
-        <li>Premio de $500 MXN cuando el referido tiene su contrato firmado y su primera ruta pagada.</li>
-        <li>Premio de $1,500 MXN cuando completa al menos 15 rutas pagadas dentro de los 30 días siguientes a su primera ruta.</li>
-        <li>Bigticket valida cada premio antes de pagarlo y puede anularlo si detecta registros falsos o duplicados. Los pagos se hacen por transferencia a la CLABE que registres.</li>
-      </ul>
-      <form method="dialog"><button className="btn">Entendido</button></form>
-    </dialog>
   )
 }
 
