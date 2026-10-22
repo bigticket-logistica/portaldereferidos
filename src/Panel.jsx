@@ -294,7 +294,22 @@ function MiCodigo({ codigo, nombre }) {
     QRCode.toDataURL(linkQr, { width: 720, margin: 1, color: { dark: '#002E5D', light: '#FFFFFF' } }).then(setQr)
   }, [linkQr])
 
-  const mensaje = `Hola. Bigticket busca transportistas que facturen para rutas de última milla con Mercado Libre: pagos semanales por ruta. Postúlate con mi invitación: ${link}`
+  // Mensaje de la maqueta de WhatsApp (los *asteriscos* son negrita en WhatsApp).
+  const mensaje = [
+    '¡Hola! 👋 Te cuento rápido:',
+    '',
+    '🚐 *Bigticket* reparte para Mercado Libre y está sumando *unidades para paquetería última milla*',
+    '',
+    'Pagan semanal, sin atrasos y con buenas tarifas',
+    '',
+    'Si te interesa (o conoces a alguien), regístrate aquí 👇',
+    '',
+    `📲 ${link}`,
+    '',
+    '✅ Te llaman en menos de 24 horas',
+    '',
+    '¡Cualquier duda me dices! 🙌',
+  ].join('\n')
   const whatsapp = () => window.open(`https://wa.me/?text=${encodeURIComponent(mensaje)}`, '_blank')
   const copiar = async () => {
     try { await navigator.clipboard.writeText(link); setCopiado(true); setTimeout(() => setCopiado(false), 1800) } catch { /* sin portapapeles */ }
