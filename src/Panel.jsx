@@ -75,7 +75,7 @@ export default function Panel({ session }) {
           {abierto || subT ? (
             <div className="app-cab-t">
               <span className="app-saludo">{abierto ? 'Tu referido' : subT[0]}</span>
-              <span className="app-nombre">{abierto ? corto(abierto) : subT[1]}</span>
+              <span className="app-nombre">{abierto ? nombreApellido(abierto) : subT[1]}</span>
             </div>
           ) : (
           <div className="app-cab-t">
@@ -141,6 +141,8 @@ const PESTANAS = [
 const EN_RUTA = ['primera_ruta', 'quince_rutas']
 const NO_AVANZO = ['no_aprobado', 'sin_meta_30_dias']
 // "Pedro R.": nombre y la inicial del apellido, como en la maqueta.
+// Nombre y apellido completos (maquetas Mis referidos y Detalle): las dos primeras palabras.
+const nombreApellido = (r) => String(r.nombre || r.razon_social || '').trim().split(/\s+/).slice(0, 2).join(' ')
 const corto = (r) => { const [n, a] = String(r.nombre || r.razon_social || '').trim().split(/\s+/); return a ? `${n} ${a[0]}.` : (n || '') }
 
 // Avisos del Inicio: lo que pide una acción del referidor va primero.
@@ -396,33 +398,24 @@ function MisReferidos({ referidos, onAbrir }) {
       <span>Comparte tu QR con personas o empresas que puedan facturar. Cuando se postulen, aparecerán aquí con su avance.</span>
     </div>
   )
+  // Maqueta "Mis referidos" (3b): tarjeta con nombre, estado, texto fijo y fecha.
   return (
-    <>
-      <span className="app-eyebrow">{referidos.length} {referidos.length === 1 ? 'persona' : 'personas'} con tu QR</span>
-      {referidos.map(r => {
-        const e = etapaDe(r)
-        const dias = diasActivo(r)
-        return (
-          <button key={r.referido_id} className="tarjeta ref-fila" onClick={() => onAbrir(r.referido_id)}>
-            <span className="ref-fila-cab">
-              <b>{corto(r)}</b>
-              <span className={`pill ${e.tono}`}>{e.pill}</span>
-            </span>
-            {r.etapa === 'primera_ruta' ? (
-              <>
-                <span className="barra"><span style={{ width: `${Math.min(100, (r.rutas_30 / 15) * 100)}%` }} /></span>
-                <span className="ref-fila-pie"><span>Día {dias} de 30 · {r.rutas_30} de 15 rutas</span><em>Ver detalle ›</em></span>
-              </>
-            ) : (
-              <>
-                <span className="ref-fila-t">{e.texto}</span>
-                <span className="ref-fila-pie"><span>Desde el {fechaCorta(r.creado_at)}</span><em>Ver detalle ›</em></span>
-              </>
-            )}
-          </button>
-        )
-      })}
-    </>
+    <div className="ref-list">
+      <span className="ref-list__label">{referidos.length} {referidos.length === 1 ? 'PERSONA' : 'PERSONAS'} CON TU QR</span>
+      {referidos.map(r => (
+        <button key={r.referido_id} className="ref-card" onClick={() => onAbrir(r.referido_id)}>
+          <span className="ref-card__top">
+            <span className="ref-card__name">{nombreApellido(r)}</span>
+            <span className="ref-status">{etapaDe(r).pill}</span>
+          </span>
+          <span className="ref-card__text">Postulación recibida. Revisa su avance en Ver detalle.</span>
+          <span className="ref-card__foot">
+            <span className="ref-card__date">{fechaCorta(r.creado_at)} ·</span>
+            <span className="ref-card__more">Ver detalle ›</span>
+          </span>
+        </button>
+      ))}
+    </div>
   )
 }
 
@@ -443,8 +436,8 @@ function Detalle({ r, premios }) {
     { t: 'Solicitud de alta', d: i > 2 ? 'Alta aprobada' : 'Solicitamos su alta para que pueda operar', ok: i > 2, cur: i === 2 },
     { t: 'Contrato firmado', d: r.firmado_at ? fechaCorta(r.firmado_at) : 'Le enviaremos su contrato para firmar', ok: !!r.firmado_at, cur: i === 3 },
     { t: 'Primera ruta', d: r.primera_ruta ? `${fechaCorta(r.primera_ruta)} · $500${p1 ? ` ${ESTADO[p1.estado]}` : ''}` : 'Con su primera ruta ganas $500', ok: !!r.primera_ruta, cur: i === 4 },
-    { t: '30 días activo', d: r.etapa === 'primera_ruta' ? `Va en el día ${dias}. Se cumple el ${fechaCorta(cumple)}.` : r.etapa === 'quince_rutas' ? 'Completado' : r.etapa === 'sin_meta_30_dias' ? 'No llegó a 15 rutas' : 'Se cuentan desde su primera ruta', ok: r.etapa === 'quince_rutas', cur: r.etapa === 'primera_ruta', mal: r.etapa === 'sin_meta_30_dias' },
-    { t: 'Meta cumplida', d: p2 ? `$1,500 ${ESTADO[p2.estado]}` : '$1,500 al llegar a 15 rutas en 30 días', ok: r.etapa === 'quince_rutas' },
+    { t: '30 días activo', d: r.etapa === 'primera_ruta' ? `Va en el día ${dias}. Se cumple el ${fechaCorta(cumple)}.` : r.etapa === 'quince_rutas' ? 'Completado' : r.etapa === 'sin_meta_30_dias' ? 'No llegó a 20 rutas' : 'Se cuentan desde su primera ruta', ok: r.etapa === 'quince_rutas', cur: r.etapa === 'primera_ruta', mal: r.etapa === 'sin_meta_30_dias' },
+    { t: 'Meta cumplida', d: p2 ? `$1,500 ${ESTADO[p2.estado]}` : '$1,500 al llegar a 20 rutas en 30 días', ok: r.etapa === 'quince_rutas' },
   ]
 
   return (
@@ -455,22 +448,27 @@ function Detalle({ r, premios }) {
           <section className="tarjeta avance">
             <div className="avance-fila"><span>Días activo</span><b>{dias} de 30</b></div>
             <span className="barra"><span style={{ width: `${(dias / 30) * 100}%` }} /></span>
-            <div className="avance-fila"><span>Rutas ejecutadas</span><b>{r.rutas_30} de 15</b></div>
-            <span className="barra"><span style={{ width: `${Math.min(100, (r.rutas_30 / 15) * 100)}%` }} /></span>
+            <div className="avance-fila"><span>Rutas ejecutadas</span><b>{r.rutas_30} de 20</b></div>
+            <span className="barra"><span style={{ width: `${Math.min(100, (r.rutas_30 / 20) * 100)}%` }} /></span>
           </section>
         </>
       )}
       {r.etapa === 'no_aprobado' && <div className="nota-caja"><span className="nota-i">i</span><span>{etapaDe(r).texto}</span></div>}
       <span className="app-eyebrow">Paso a paso</span>
-      <ol className="tarjeta linea">
+      <ol className="steps">
         {pasos.map((p, n) => (
-          <li key={n} className={p.ok ? 'hecho' : p.mal ? 'mal' : p.cur ? 'actual' : ''}>
-            <span className="linea-punto">{p.ok ? '✓' : ''}</span>
-            <span className="linea-t"><b>{p.t}</b><span>{p.d}</span></span>
+          <li key={n} className={`step${p.ok ? ' step--done' : ''}`}>
+            <span className="step__rail"><span className="step__dot">{p.ok ? '✓' : ''}</span><span className="step__line" /></span>
+            <span className="step__body"><span className="step__title">{p.t}</span><span className="step__info">{p.d}</span></span>
           </li>
         ))}
       </ol>
-      <span className="ref-rfc">{r.razon_social || r.nombre} · RFC {r.rfc}</span>
+      <span className="det-company">{(r.razon_social || r.nombre || '').toUpperCase()} · RFC {r.rfc}</span>
+      {String(r.telefono || '').replace(/\D/g, '').length >= 10 && (
+        <a className="det-wa" href={`https://wa.me/52${String(r.telefono).replace(/\D/g, '').slice(-10)}`} target="_blank" rel="noreferrer">
+          Escribirle a {nombreApellido(r).split(' ')[0]} por WhatsApp
+        </a>
+      )}
     </>
   )
 }
