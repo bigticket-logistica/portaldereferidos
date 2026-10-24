@@ -159,7 +159,7 @@ function armarAvisos(perfil, referidos, premios) {
 
   // Bonos: el nombre del referido y de qué meta es cada uno.
   const quien = (id) => { const r = referidos.find(x => x.referido_id === id); return r ? corto(r) : 'tu referido' }
-  const META = { firma_y_primera_ruta: 'primera ruta', quince_rutas_30_dias: '15 rutas' }
+  const META = { firma_y_primera_ruta: 'primera ruta', quince_rutas_30_dias: '20 rutas' }
   const ordenados = [...premios].sort((x, y) => String(y.actualizado_at || y.cumplido_at).localeCompare(String(x.actualizado_at || x.cumplido_at)))
   for (const p of ordenados) {
     const monto = pesos(p.monto), de = `${quien(p.referido_id)} · ${META[p.tramo] || 'meta'}`
@@ -172,7 +172,7 @@ function armarAvisos(perfil, referidos, premios) {
   for (const r of referidos) {
     if (r.etapa === 'firma_contrato') a.push({ tipo: 'avance', t: `${corto(r)}: firma de contrato`, ir: 'referidos' })
     else if (r.etapa === 'entrevista_alta') a.push({ tipo: 'avance', t: `${corto(r)}: solicitud de alta`, ir: 'referidos' })
-    else if (r.etapa === 'primera_ruta') a.push({ tipo: 'avance', t: `${corto(r)}: ${r.rutas_30} de 15 rutas`, ir: 'referidos' })
+    else if (r.etapa === 'primera_ruta') a.push({ tipo: 'avance', t: `${corto(r)}: ${r.rutas_30} de 20 rutas`, ir: 'referidos' })
   }
   return a.slice(0, 5)
 }
@@ -379,8 +379,8 @@ function etapaDe(r) {
     firma_contrato: { pill: 'FIRMA', tono: 'azul', texto: 'Le enviamos su contrato. Recuérdale firmarlo para que pueda empezar a rutear.' },
     contrato_firmado: { pill: 'CONTRATO FIRMADO', tono: 'azul', texto: 'Ya firmó. Con su primera ruta ganas tus primeros $500.' },
     primera_ruta: { pill: 'EN RUTA', tono: 'navy', texto: null },
-    quince_rutas: { pill: 'META CUMPLIDA', tono: 'verde', texto: 'Cumplió 15 rutas en sus primeros 30 días. Ganaste los $2,000 completos.' },
-    sin_meta_30_dias: { pill: 'SIN META', tono: 'gris', texto: 'No llegó a 15 rutas en sus primeros 30 días. Los $500 de su primera ruta siguen siendo tuyos.' },
+    quince_rutas: { pill: 'META CUMPLIDA', tono: 'verde', texto: 'Cumplió 20 rutas en sus primeros 30 días. Ganaste los $2,000 completos.' },
+    sin_meta_30_dias: { pill: 'SIN META', tono: 'gris', texto: 'No llegó a 20 rutas en sus primeros 30 días. Los $500 de su primera ruta siguen siendo tuyos.' },
     no_aprobado: { pill: 'NO AVANZÓ', tono: 'gris', texto: 'No pasó la validación. Puedes referir a otra persona con tu mismo QR.' },
   }
   return T[r.etapa] || T.registrado
@@ -494,7 +494,7 @@ function MisPagos({ perfil, referidos, premios, ir }) {
     }
     if (r.etapa === 'primera_ruta' && !ya('quince_rutas_30_dias')) {
       const fin = new Date(new Date(r.primera_ruta + 'T12:00:00').getTime() + 29 * 86400000)
-      enCurso.push({ k: r.referido_id + '2', t: `30 días de ${corto(r)}`, d: `Va en ${r.rutas_30} de 15 rutas · plazo al ${fechaCorta(fin)}`, m: 1500 })
+      enCurso.push({ k: r.referido_id + '2', t: `30 días de ${corto(r)}`, d: `Va en ${r.rutas_30} de 20 rutas · plazo al ${fechaCorta(fin)}`, m: 1500 })
     }
   }
   const terminacion = perfil.clabe ? perfil.clabe.slice(-4) : null
@@ -664,7 +664,7 @@ function Reglas() {
       <span className="app-eyebrow">Cuánto ganas</span>
       <section className="tarjeta ganas">
         <div><b>$500</b><span>cuando tu referido firma su contrato y hace su primera ruta</span></div>
-        <div><b>$1,500</b><span>cuando completa 15 rutas en los 30 días siguientes a su primera ruta</span></div>
+        <div><b>$1,500</b><span>cuando completa 20 rutas en los 30 días siguientes a su primera ruta</span></div>
       </section>
       <span className="app-eyebrow">Las reglas</span>
       <ol className="tarjeta reglas">
