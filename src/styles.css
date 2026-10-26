@@ -562,3 +562,15 @@ body.rules-open { overflow: hidden; }
 .det-company { display: block; text-align: center; font: 400 13px 'Open Sans', var(--font); color: #545454; }
 .det-wa { margin-top: 4px; height: 52px; border: 1.5px solid #002E5D; border-radius: 14px; background: #fff; color: #002E5D; font: 600 16px Poppins, var(--font);
   display: flex; align-items: center; justify-content: center; text-decoration: none; }
+
+/* ── Portada · texto principal (maqueta) ── */
+.acceso-cab { gap: 18px; }
+.acceso-cab h1.hero-title { margin: 0; font: 700 44px/50px Poppins, var(--font); color: #fff; letter-spacing: 0; text-wrap: pretty; max-width: 520px; }
+.acceso-cab h1.hero-title .hero-accent { color: #FF6600; }
+.hero-sub { margin: 0; font: 400 18px/27px 'Open Sans', var(--font); color: #fff; max-width: 520px; }
+.hero-note { font: 400 13px/19px 'Open Sans', var(--font); color: #C9D6E8; text-decoration: underline; align-self: flex-start; }
+.hero-note:hover { color: #FF6600; }
+@media (max-width: 600px) {
+  .acceso-cab h1.hero-title { font-size: 32px; line-height: 38px; }
+  .hero-sub { font-size: 16px; line-height: 24px; }
+}

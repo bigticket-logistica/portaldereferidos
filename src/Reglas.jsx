@@ -41,7 +41,7 @@ function Lista() {
 }
 
 // Link que abre el modal; el formulario conserva lo escrito.
-export function LinkReglas({ children = 'reglas del programa' }) {
+export function LinkReglas({ children = 'reglas del programa', className = 'rules-link' }) {
   const [abierto, setAbierto] = useState(() => window.location.hash === '#reglas')
   const link = useRef(null)
   const cerrar = () => {
@@ -51,7 +51,7 @@ export function LinkReglas({ children = 'reglas del programa' }) {
   }
   return (
     <>
-      <a ref={link} href="#reglas" className="rules-link" onClick={e => { e.preventDefault(); setAbierto(true) }}>{children}</a>
+      <a ref={link} href="#reglas" className={className} onClick={e => { e.preventDefault(); setAbierto(true) }}>{children}</a>
       {abierto && <ModalReglas onCerrar={cerrar} />}
     </>
   )

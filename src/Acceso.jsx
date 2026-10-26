@@ -21,8 +21,10 @@ export default function Acceso({ recuperando, onListo, onRecuperando }) {
     <div className="acceso">
       <header className="acceso-cab">
         <Logo />
-        <h1>Presenta a un transportista y gana <span>$2,000</span></h1>
-        <p className="acceso-p">Por cada persona o empresa que facture y entre a rutear con Bigticket.</p>
+        {/* Maqueta "Portada · texto principal" */}
+        <h1 className="hero-title">Refiere un driver con unidad propia y gana <span className="hero-accent">$2,000 MXN</span></h1>
+        <p className="hero-sub">Recibes $500 en su primera ruta y $1,500 al cumplir 30 días activo con 20 rutas.*</p>
+        <LinkReglas className="hero-note">*Sujeto a indicadores de servicio DS | VS | PNR.</LinkReglas>
       </header>
 
       <main className="acceso-hoja">
