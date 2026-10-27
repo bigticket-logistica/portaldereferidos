@@ -26,7 +26,7 @@ const DOCS = [
   { k: 'ine', t: 'INE por delante', req: true },
   { k: 'ine_2', t: 'INE por detrás', req: true },
   { k: 'rfc', t: 'Constancia de situación fiscal (RFC)', req: true },
-  { k: 'licencia', t: 'Licencia de conducir', req: false },
+  { k: 'licencia', t: 'Licencia de conducir', req: true },
 ]
 const MAX_MB = 10
 
@@ -171,7 +171,7 @@ export default function Invitacion({ codigo, canal = false }) {
         tipo_vehiculo: Object.entries(conteo).map(([t, n]) => `${n} ${t}`).join(', '),
         vehiculos,
         url_curp: docs.curp?.url, url_ine: docs.ine?.url, url_ine_2: docs.ine_2?.url,
-        url_rfc: docs.rfc?.url, url_licencia: docs.licencia?.url || null,
+        url_rfc: docs.rfc?.url, url_licencia: docs.licencia?.url,
         // La propuesta que vio y aceptó (la función guarda su copia desde ref_oportunidades).
         propuesta_aceptada: true,
         propuesta: propuesta.map(o => ({ tipo_vehiculo: o.tipo_vehiculo, tarifa: o.tarifa, nota: o.nota || null })),

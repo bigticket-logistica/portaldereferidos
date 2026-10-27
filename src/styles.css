@@ -574,3 +574,9 @@ body.rules-open { overflow: hidden; }
   .acceso-cab h1.hero-title { font-size: 32px; line-height: 38px; }
   .hero-sub { font-size: 16px; line-height: 24px; }
 }
+
+/* "¿Por dónde te enteraste…?" del registro */
+.fuentes { display: flex; flex-wrap: wrap; gap: 8px; }
+.fuente { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; border: 1.5px solid #d0d5dd; border-radius: 12px; background: #fff; cursor: pointer; font: 600 14px 'Open Sans', var(--font); color: #344054; }
+.fuente input { width: 18px; height: 18px; accent-color: #FF6600; margin: 0; }
+.fuente.on { border-color: #FF6600; background: #FFF4EC; color: #002E5D; }

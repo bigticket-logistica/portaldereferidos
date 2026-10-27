@@ -69,8 +69,11 @@ function Ingresar({ onOlvide, onInscribirme }) {
   )
 }
 
+// "¿Por dónde te enteraste…?" (se guarda en ref_referidores.como_nos_conocio)
+const FUENTES = [['facebook', 'Facebook'], ['whatsapp', 'WhatsApp'], ['amigo', 'Un amigo'], ['supervisor', 'Supervisor BigTicket'], ['otro', 'Otro']]
+
 function Registro({ onYaTengo }) {
-  const [d, setD] = useState({ nombre: '', curp: '', correo: '', telefono: '', clave: '', clave2: '' })
+  const [d, setD] = useState({ nombre: '', curp: '', correo: '', telefono: '', clave: '', clave2: '', fuentes: [], fuenteOtro: '' })
   const [err, setErr] = useState({})
   const [general, setGeneral] = useState('')
   const [busy, setBusy] = useState(false)
@@ -85,6 +88,8 @@ function Registro({ onYaTengo }) {
     if (!CURP_RE.test(d.curp)) e.curp = 'Son 18 caracteres. Revísalo en tu INE o en gob.mx/curp.'
     if (!/^\S+@\S+\.\S+$/.test(d.correo.trim())) e.correo = 'Revisa el correo.'
     if (soloDigitos(d.telefono).length !== 10) e.telefono = 'Son 10 dígitos, sin el 52.'
+    if (d.fuentes.length === 0) e.fuentes = 'Elige al menos una opción.'
+    else if (d.fuentes.includes('otro') && !d.fuenteOtro.trim()) e.fuentes = 'Cuéntanos por dónde.'
     if (d.clave.length < 8) e.clave = 'Mínimo 8 caracteres.'
     else if (d.clave !== d.clave2) e.clave2 = 'Las contraseñas no coinciden.'
     setErr(e)
@@ -99,7 +104,10 @@ function Registro({ onYaTengo }) {
   const crear = async (aceptadas) => {
     setGeneral('')
     setBusy(true)
-    const datos = { nombre: d.nombre.trim(), curp: d.curp, telefono: soloDigitos(d.telefono), reglas_aceptadas_at: aceptadas }
+    const datos = {
+      nombre: d.nombre.trim(), curp: d.curp, telefono: soloDigitos(d.telefono), reglas_aceptadas_at: aceptadas,
+      como_nos_conocio: d.fuentes, como_nos_conocio_otro: d.fuentes.includes('otro') ? d.fuenteOtro.trim() : null,
+    }
     const { data, error } = await supabase.auth.signUp({
       email: d.correo.trim().toLowerCase(), password: d.clave,
       options: { data: { referidor: datos }, emailRedirectTo: window.location.origin },
@@ -139,6 +147,22 @@ function Registro({ onYaTengo }) {
         <input value={d.curp} onChange={e => S('curp', e.target.value.toUpperCase().replace(/\s/g, '').slice(0, 18))} autoCapitalize="characters" className="mono" placeholder="18 caracteres" />
       </Campo>
       <Campo label="Tu correo" error={err.correo}><input type="email" value={d.correo} onChange={e => S('correo', e.target.value)} autoComplete="email" placeholder="tucorreo@ejemplo.com" /></Campo>
+      <Campo label="¿Por dónde te enteraste de la Campaña Referidos BigTicket?" error={err.fuentes} ayuda="Puedes marcar más de una.">
+        <div className="fuentes">
+          {FUENTES.map(([k, t]) => {
+            const on = d.fuentes.includes(k)
+            return (
+              <label key={k} className={`fuente${on ? ' on' : ''}`}>
+                <input type="checkbox" checked={on} onChange={() => S('fuentes', on ? d.fuentes.filter(x => x !== k) : [...d.fuentes, k])} />
+                <span>{t}</span>
+              </label>
+            )
+          })}
+        </div>
+        {d.fuentes.includes('otro') && (
+          <input style={{ marginTop: 8 }} value={d.fuenteOtro} onChange={e => S('fuenteOtro', e.target.value)} placeholder="¿Por dónde?" />
+        )}
+      </Campo>
       <div className="dos">
         <Campo label="Crea una contraseña" error={err.clave}><Clave value={d.clave} onChange={v => S('clave', v)} placeholder="Mínimo 8" autoComplete="new-password" /></Campo>
         <Campo label="Repítela" error={err.clave2}><Clave value={d.clave2} onChange={v => S('clave2', v)} autoComplete="new-password" /></Campo>
