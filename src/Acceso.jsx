@@ -72,8 +72,23 @@ function Ingresar({ onOlvide, onInscribirme }) {
 // "¿Por dónde te enteraste…?" (se guarda en ref_referidores.como_nos_conocio)
 const FUENTES = [['facebook', 'Facebook'], ['whatsapp', 'WhatsApp'], ['amigo', 'Un amigo'], ['supervisor', 'Supervisor BigTicket'], ['otro', 'Otro']]
 
+// Anfitrión: supervisor de Bigticket que comparte su link (referidos.fleetbiggy.com/?a=A0005).
+// No es referidor ni cobra bonos; solo queda registrado quién invitó al referidor.
+function leerAnfitrion() {
+  try {
+    const a = new URLSearchParams(window.location.search).get('a')
+    if (a && /^A\d{4}$/i.test(a)) { localStorage.setItem('ref_anfitrion', a.toUpperCase()); return a.toUpperCase() }
+    return localStorage.getItem('ref_anfitrion') || null
+  } catch { return null }
+}
+
 function Registro({ onYaTengo }) {
-  const [d, setD] = useState({ nombre: '', curp: '', correo: '', telefono: '', clave: '', clave2: '', fuentes: [], fuenteOtro: '' })
+  const [anfitrion] = useState(leerAnfitrion)
+  const [anfNombre, setAnfNombre] = useState('')
+  const [d, setD] = useState({ nombre: '', curp: '', correo: '', telefono: '', clave: '', clave2: '', fuentes: anfitrion ? ['supervisor'] : [], fuenteOtro: '' })
+  useEffect(() => {
+    if (anfitrion) supabase.rpc('fn_ref_anfitrion', { p_codigo: anfitrion }).then(({ data }) => setAnfNombre(data || ''))
+  }, [anfitrion])
   const [err, setErr] = useState({})
   const [general, setGeneral] = useState('')
   const [busy, setBusy] = useState(false)
@@ -107,6 +122,7 @@ function Registro({ onYaTengo }) {
     const datos = {
       nombre: d.nombre.trim(), curp: d.curp, telefono: soloDigitos(d.telefono), reglas_aceptadas_at: aceptadas,
       como_nos_conocio: d.fuentes, como_nos_conocio_otro: d.fuentes.includes('otro') ? d.fuenteOtro.trim() : null,
+      anfitrion: anfitrion || null,
     }
     const { data, error } = await supabase.auth.signUp({
       email: d.correo.trim().toLowerCase(), password: d.clave,
@@ -135,6 +151,7 @@ function Registro({ onYaTengo }) {
   return (
     <form onSubmit={irReglas} className="form" noValidate>
       <h2 className="form-t">Inscríbete y recibe tu QR</h2>
+      {anfNombre && <div className="anf-invita">👋 Te invitó <b>{anfNombre}</b>, de BigTicket</div>}
       <button type="button" className="aviso-cuenta-bt" onClick={onYaTengo}>
         <b>¿Ya tienes cuenta en el Portal del Transportista?</b> No te inscribas de nuevo: entra con el mismo correo y la misma contraseña. ›
       </button>

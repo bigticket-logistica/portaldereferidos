@@ -595,3 +595,6 @@ body.rules-open { overflow: hidden; }
 .msg-escribir textarea { flex: 1; border: 0; resize: none; font: 400 16px/22px 'Open Sans', var(--font); outline: none; background: transparent; }
 .msg-escribir .btn { width: auto; padding: 0 18px; min-height: 44px; }
 .aviso-error { background: #FBEAE8; color: #D92D20; border-radius: 10px; padding: 8px 12px; font-size: 13px; }
+
+/* Inscripción con link de anfitrión (supervisor) */
+.anf-invita { background: #FFF4EC; border: 1px solid #FBD9C0; color: #002E5D; border-radius: 12px; padding: 10px 14px; font: 400 14px 'Open Sans', var(--font); margin-bottom: 4px; }
