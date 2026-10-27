@@ -4,7 +4,7 @@
 // lo suyo (RLS en ref_referidores y ref_premios, filtro por usuario en la vista
 // vw_ref_mis_referidos).
 // ═══════════════════════════════════════════════════════════════════════════
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import QRCode from 'qrcode'
 import { supabase, mensajeError } from './supabase'
 import { Campo, Logo, CURP_RE, soloDigitos, pesos, fechaCorta, TelefonoMX } from './comun'
@@ -410,12 +410,21 @@ function Mensajes({ perfil, mensajes, onCambio }) {
         <div className="tarjeta vacia"><b>Todavía no tienes mensajes.</b><span>Si tienes una duda sobre el programa, tus referidos o tus pagos, escríbenos aquí.</span></div>
       )}
       <div className="msg-lista">
-        {mensajes.map(m => (
-          <div key={m.id} className={`msg ${m.de === 'bigticket' ? 'bt' : 'yo'}`}>
-            <div className="msg-texto">{m.texto}</div>
-            <div className="msg-pie">{m.de === 'bigticket' ? 'BigTicket' : 'Tú'} · {new Date(m.creado_at).toLocaleString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</div>
-          </div>
-        ))}
+        {mensajes.map((m, i) => {
+          const d = new Date(m.creado_at)
+          const diaTxt = d.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })
+          const nuevoDia = i === 0 || new Date(mensajes[i - 1].creado_at).toDateString() !== d.toDateString()
+          return (
+            <Fragment key={m.id}>
+              {nuevoDia && <div className="msg-dia">{diaTxt.charAt(0).toUpperCase() + diaTxt.slice(1)}</div>}
+              <div className={`msg ${m.de === 'bigticket' ? 'bt' : 'yo'}`}>
+                <div className="msg-quien">{m.de === 'bigticket' ? 'BigTicket' : 'Tú'}</div>
+                <div className="msg-texto">{m.texto}</div>
+                <div className="msg-pie">{d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}</div>
+              </div>
+            </Fragment>
+          )
+        })}
         <div ref={fin} />
       </div>
       <div className="msg-escribir">

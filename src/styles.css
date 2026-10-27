@@ -584,17 +584,22 @@ body.rules-open { overflow: hidden; }
 /* ── Mensajes con BigTicket ── */
 .aviso-tag.t-mensaje { background: var(--navy); color: #fff; border-color: var(--navy); }
 .msg-badge { display: inline-block; margin-left: 8px; min-width: 18px; padding: 0 6px; border-radius: 9px; background: #FF6600; color: #fff; font-size: 11px; line-height: 18px; text-align: center; vertical-align: middle; }
-.msg-pantalla { display: flex; flex-direction: column; gap: 12px; }
-.msg-lista { display: flex; flex-direction: column; gap: 10px; }
-.msg { max-width: 82%; border-radius: 16px; padding: 10px 13px; box-shadow: 0 1px 3px rgba(0,46,93,.10); }
-.msg.bt { align-self: flex-start; background: #fff; border-top-left-radius: 4px; }
-.msg.yo { align-self: flex-end; background: #FFF0E6; border-top-right-radius: 4px; }
-.msg-texto { font: 400 15px/21px 'Open Sans', var(--font); color: #363739; white-space: pre-wrap; }
-.msg-pie { margin-top: 4px; font: 400 11.5px 'Open Sans', var(--font); color: #8B8B8B; }
-.msg-escribir { display: flex; gap: 8px; align-items: flex-end; background: #fff; border-radius: 16px; padding: 10px; box-shadow: 0 1px 3px rgba(0,46,93,.12); }
-.msg-escribir textarea { flex: 1; border: 0; resize: none; font: 400 16px/22px 'Open Sans', var(--font); outline: none; background: transparent; }
-.msg-escribir .btn { width: auto; padding: 0 18px; min-height: 44px; }
+/* Pantalla de chat: ocupa todo el alto disponible; los mensajes quedan abajo,
+   cerca del campo para escribir, y el campo queda fijo sobre la barra inferior. */
+.msg-pantalla { display: flex; flex-direction: column; gap: 12px; min-height: calc(100dvh - 76px - 96px - env(safe-area-inset-bottom, 0px)); padding-top: 8px; }
+.msg-lista { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; gap: 12px; }
+.msg { max-width: 80%; border-radius: 18px; padding: 12px 16px; box-shadow: 0 1px 3px rgba(0,46,93,.10); }
+.msg.bt { align-self: flex-start; background: #fff; border-top-left-radius: 6px; }
+.msg.yo { align-self: flex-end; background: #FFF0E6; border-top-right-radius: 6px; }
+.msg-quien { font: 700 12.5px Poppins, var(--font); color: #002E5D; margin-bottom: 3px; }
+.msg.yo .msg-quien { color: #C2410C; text-align: right; }
+.msg-texto { font: 400 16px/23px 'Open Sans', var(--font); color: #363739; white-space: pre-wrap; }
+.msg-pie { margin-top: 5px; font: 400 12px 'Open Sans', var(--font); color: #8B8B8B; }
+.msg.yo .msg-pie { text-align: right; }
+.msg-dia { align-self: center; font: 600 12px 'Open Sans', var(--font); color: #8B8B8B; background: #E9EAEC; border-radius: 10px; padding: 3px 10px; }
+.msg-escribir { position: sticky; bottom: calc(84px + env(safe-area-inset-bottom, 0px)); display: flex; gap: 10px; align-items: flex-end;
+  background: #fff; border-radius: 18px; padding: 10px 10px 10px 16px; box-shadow: 0 4px 16px rgba(0,46,93,.14); }
+.msg-escribir textarea { flex: 1; border: 0; resize: none; min-height: 48px; max-height: 140px; padding: 12px 0; font: 400 16px/22px 'Open Sans', var(--font); outline: none; background: transparent; }
+.msg-escribir .btn { width: auto; padding: 0 22px; min-height: 48px; border-radius: 14px; }
+.msg-escribir .btn:not(:disabled) { background: #FF6600; color: #fff; }
 .aviso-error { background: #FBEAE8; color: #D92D20; border-radius: 10px; padding: 8px 12px; font-size: 13px; }
-
-/* Inscripción con link de anfitrión (supervisor) */
-.anf-invita { background: #FFF4EC; border: 1px solid #FBD9C0; color: #002E5D; border-radius: 12px; padding: 10px 14px; font: 400 14px 'Open Sans', var(--font); margin-bottom: 4px; }
