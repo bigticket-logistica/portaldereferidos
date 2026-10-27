@@ -4,7 +4,7 @@
 // lo suyo (RLS en ref_referidores y ref_premios, filtro por usuario en la vista
 // vw_ref_mis_referidos).
 // ═══════════════════════════════════════════════════════════════════════════
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import QRCode from 'qrcode'
 import { supabase, mensajeError } from './supabase'
 import { Campo, Logo, CURP_RE, soloDigitos, pesos, fechaCorta, TelefonoMX } from './comun'
@@ -18,7 +18,8 @@ export default function Panel({ session }) {
   const [error, setError] = useState('')
   const [vista, setVista] = useState('inicio')
   const [detalle, setDetalle] = useState(null)        // id del referido abierto
-  const [sub, setSub] = useState(null)                 // 'registrar' | 'reglas' dentro de Cuenta
+  const [sub, setSub] = useState(null)                 // 'registrar' | 'reglas' | 'mensajes' dentro de Cuenta
+  const [mensajes, setMensajes] = useState([])         // conversación con BigTicket (ref_mensajes)
 
   const cargar = useCallback(async () => {
     const { data: p } = await supabase.from('ref_referidores').select('*').eq('id', session.user.id).maybeSingle()
@@ -33,18 +34,19 @@ export default function Panel({ session }) {
       setPerfil(null); return
     }
     setPerfil(p)
-    const [r, pr, op] = await Promise.all([
+    const [r, pr, op, ms] = await Promise.all([
       supabase.from('vw_ref_mis_referidos').select('*').order('creado_at', { ascending: false }),
       supabase.from('ref_premios').select('*'),
       supabase.from('vw_ref_oportunidades').select('*'),
+      supabase.from('ref_mensajes').select('*').order('creado_at'),
     ])
-    setReferidos(r.data || []); setPremios(pr.data || []); setOportunidades(op.data || [])
+    setReferidos(r.data || []); setPremios(pr.data || []); setOportunidades(op.data || []); setMensajes(ms.data || [])
   }, [session])
 
   useEffect(() => { cargar() }, [cargar])
   const ir = (v) => {
     // "registrar" y "reglas" son pantallas de Cuenta: se abren con su flecha de volver.
-    if (v === 'registrar' || v === 'reglas') { setVista('cuenta'); setSub(v) } else { setVista(v); setSub(null) }
+    if (v === 'registrar' || v === 'reglas' || v === 'mensajes') { setVista('cuenta'); setSub(v) } else { setVista(v); setSub(null) }
     setDetalle(null); window.scrollTo(0, 0)
   }
   const abrir = (id) => { setVista('referidos'); setDetalle(id); window.scrollTo(0, 0) }
@@ -56,9 +58,9 @@ export default function Panel({ session }) {
     </div>
   )
 
-  const avisos = armarAvisos(perfil, referidos || [], premios)
+  const avisos = armarAvisos(perfil, referidos || [], premios, mensajes)
   const abierto = detalle ? (referidos || []).find(r => r.referido_id === detalle) : null
-  const SUBS = { registrar: ['Mi cuenta', 'Registra tu cuenta'], reglas: ['Programa de referidos', 'Reglas y ayuda'] }
+  const SUBS = { registrar: ['Mi cuenta', 'Registra tu cuenta'], reglas: ['Programa de referidos', 'Reglas y ayuda'], mensajes: ['Programa de referidos', 'Mensajes'] }
   const subT = vista === 'cuenta' && sub ? SUBS[sub] : null
   const volver = () => { if (abierto) setDetalle(null); else setSub(null); window.scrollTo(0, 0) }
   const TITULOS = { qr: 'Mi QR personal', referidos: 'Mis referidos', pagos: 'Mis pagos', cuenta: 'Mi cuenta' }
@@ -108,11 +110,12 @@ export default function Panel({ session }) {
         {vista === 'referidos' && !abierto && <MisReferidos referidos={referidos} onAbrir={abrir} />}
         {vista === 'referidos' && abierto && <Detalle r={abierto} premios={premios.filter(p => p.referido_id === abierto.referido_id)} />}
         {vista === 'pagos' && <MisPagos perfil={perfil} referidos={referidos || []} premios={premios} ir={ir} />}
-        {vista === 'cuenta' && !sub && <MiCuenta perfil={perfil} ir={ir} />}
+        {vista === 'cuenta' && !sub && <MiCuenta perfil={perfil} ir={ir} sinLeer={mensajes.filter(m => m.de === 'bigticket' && !m.leido_at).length} />}
         {vista === 'cuenta' && sub === 'registrar' && (
           <RegistrarCuenta perfil={perfil} referidos={referidos || []} onGuardado={async () => { await cargar(); setSub(null); window.scrollTo(0, 0) }} />
         )}
         {vista === 'cuenta' && sub === 'reglas' && <Reglas />}
+        {vista === 'cuenta' && sub === 'mensajes' && <Mensajes perfil={perfil} mensajes={mensajes} onCambio={cargar} />}
       </main>
 
       <nav className="app-tabs" aria-label="Secciones">
@@ -148,12 +151,18 @@ const corto = (r) => { const [n, a] = String(r.nombre || r.razon_social || '').t
 // Avisos del Inicio: lo que pide una acción del referidor va primero.
 // Orden: lo que pide una acción, después los bonos (pagado, aprobado, por
 // validar, no procede) y al final el avance de cada referido.
-const ETIQUETA_AVISO = { atencion: 'ATENCIÓN', pagado: 'PAGADO', aprobado: 'APROBADO', bono: 'BONO', rechazo: 'REVISA', avance: 'AVANCE' }
+const ETIQUETA_AVISO = { mensaje: 'MENSAJE', atencion: 'ATENCIÓN', pagado: 'PAGADO', aprobado: 'APROBADO', bono: 'BONO', rechazo: 'REVISA', avance: 'AVANCE' }
 const DIAS_VISIBLE = 14
 const reciente = (f) => f && (Date.now() - new Date(f).getTime()) < DIAS_VISIBLE * 86400000
 
-function armarAvisos(perfil, referidos, premios) {
+function armarAvisos(perfil, referidos, premios, mensajes = []) {
   const a = []
+  // Mensajes de BigTicket sin leer: primero, porque piden algo al referidor.
+  const nuevos = mensajes.filter(m => m.de === 'bigticket' && !m.leido_at)
+  if (nuevos.length) {
+    const ult = nuevos[nuevos.length - 1].texto
+    a.push({ tipo: 'mensaje', t: nuevos.length > 1 ? `Tienes ${nuevos.length} mensajes de BigTicket` : `BigTicket: ${ult.length > 70 ? ult.slice(0, 70) + '…' : ult}`, ir: 'mensajes' })
+  }
   const hayPremios = premios.some(p => p.estado !== 'rechazado')
   if (hayPremios && !perfil.clabe) a.push({ tipo: 'atencion', t: 'Registra tu cuenta para cobrar tus bonos', ir: 'registrar' })
 
@@ -368,6 +377,56 @@ function MiCodigo({ codigo, nombre }) {
   )
 }
 
+// ── Mensajes con BigTicket ────────────────────────────────────────────────────
+// Lo que escribe el analista desde el Brain llega aquí (y por correo). Al abrir
+// la pantalla se marcan como leídos; el referidor puede responder sus dudas.
+function Mensajes({ perfil, mensajes, onCambio }) {
+  const [texto, setTexto] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const fin = useRef(null)
+
+  useEffect(() => {
+    const sinLeer = mensajes.some(m => m.de === 'bigticket' && !m.leido_at)
+    if (sinLeer) {
+      supabase.from('ref_mensajes').update({ leido_at: new Date().toISOString() })
+        .eq('referidor_id', perfil.id).eq('de', 'bigticket').is('leido_at', null).then(() => onCambio())
+    }
+  }, [mensajes.length])   // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { fin.current?.scrollIntoView({ block: 'end' }) }, [mensajes.length])
+
+  const enviar = async () => {
+    if (!texto.trim()) return
+    setBusy(true); setError('')
+    const { error: e } = await supabase.from('ref_mensajes').insert({ referidor_id: perfil.id, de: 'referidor', texto: texto.trim() })
+    setBusy(false)
+    if (e) { setError('No se pudo enviar. Revisa tu conexión e inténtalo de nuevo.'); return }
+    setTexto(''); onCambio()
+  }
+
+  return (
+    <div className="msg-pantalla">
+      {mensajes.length === 0 && (
+        <div className="tarjeta vacia"><b>Todavía no tienes mensajes.</b><span>Si tienes una duda sobre el programa, tus referidos o tus pagos, escríbenos aquí.</span></div>
+      )}
+      <div className="msg-lista">
+        {mensajes.map(m => (
+          <div key={m.id} className={`msg ${m.de === 'bigticket' ? 'bt' : 'yo'}`}>
+            <div className="msg-texto">{m.texto}</div>
+            <div className="msg-pie">{m.de === 'bigticket' ? 'BigTicket' : 'Tú'} · {new Date(m.creado_at).toLocaleString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</div>
+          </div>
+        ))}
+        <div ref={fin} />
+      </div>
+      <div className="msg-escribir">
+        <textarea rows={2} value={texto} onChange={e => setTexto(e.target.value)} placeholder="Escribe tu duda…" />
+        <button className="btn" disabled={busy || !texto.trim()} onClick={enviar}>{busy ? 'Enviando…' : 'Enviar'}</button>
+      </div>
+      {error && <div className="aviso-error">{error}</div>}
+    </div>
+  )
+}
+
 // ── Etapas tal como las ve el referidor ─────────────────────────────────────
 // pill: la etiqueta corta · tono: color · texto: qué está pasando y qué puede
 // hacer quien lo refirió.
@@ -558,7 +617,7 @@ function MisPagos({ perfil, referidos, premios, ir }) {
 }
 
 // ── Mi cuenta ───────────────────────────────────────────────────────────────
-function MiCuenta({ perfil, ir }) {
+function MiCuenta({ perfil, ir, sinLeer = 0 }) {
   const telefono = String(perfil.telefono || '').replace(/(\d{3})(\d{3})(\d{4})/, '$1 $2 $3')
   return (
     <>
@@ -585,6 +644,9 @@ function MiCuenta({ perfil, ir }) {
         <div><b>{perfil.nombre}</b><span>Inscrito desde el {fechaCorta(perfil.creado_at)}</span></div>
         <div><b>{telefono}</b><span>Tu WhatsApp para los avisos</span></div>
         <div><b>{perfil.correo}</b><span>Tu correo para ingresar</span></div>
+        <button className="fila-link" onClick={() => ir('mensajes')}>
+          <span><b>Mensajes{sinLeer > 0 && <span className="msg-badge">{sinLeer}</span>}</b><span>Escríbenos tus dudas y lee los avisos de BigTicket</span></span><em>›</em>
+        </button>
         <button className="fila-link" onClick={() => ir('reglas')}><span><b>Reglas y ayuda</b><span>Cómo se gana y cuándo se paga</span></span><em>›</em></button>
       </section>
       <button className="btn sec ancho" onClick={() => supabase.auth.signOut()}>Cerrar sesión</button>

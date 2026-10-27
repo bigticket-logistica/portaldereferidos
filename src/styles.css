@@ -580,3 +580,18 @@ body.rules-open { overflow: hidden; }
 .fuente { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; border: 1.5px solid #d0d5dd; border-radius: 12px; background: #fff; cursor: pointer; font: 600 14px 'Open Sans', var(--font); color: #344054; }
 .fuente input { width: 18px; height: 18px; accent-color: #FF6600; margin: 0; }
 .fuente.on { border-color: #FF6600; background: #FFF4EC; color: #002E5D; }
+
+/* ── Mensajes con BigTicket ── */
+.aviso-tag.t-mensaje { background: var(--navy); color: #fff; border-color: var(--navy); }
+.msg-badge { display: inline-block; margin-left: 8px; min-width: 18px; padding: 0 6px; border-radius: 9px; background: #FF6600; color: #fff; font-size: 11px; line-height: 18px; text-align: center; vertical-align: middle; }
+.msg-pantalla { display: flex; flex-direction: column; gap: 12px; }
+.msg-lista { display: flex; flex-direction: column; gap: 10px; }
+.msg { max-width: 82%; border-radius: 16px; padding: 10px 13px; box-shadow: 0 1px 3px rgba(0,46,93,.10); }
+.msg.bt { align-self: flex-start; background: #fff; border-top-left-radius: 4px; }
+.msg.yo { align-self: flex-end; background: #FFF0E6; border-top-right-radius: 4px; }
+.msg-texto { font: 400 15px/21px 'Open Sans', var(--font); color: #363739; white-space: pre-wrap; }
+.msg-pie { margin-top: 4px; font: 400 11.5px 'Open Sans', var(--font); color: #8B8B8B; }
+.msg-escribir { display: flex; gap: 8px; align-items: flex-end; background: #fff; border-radius: 16px; padding: 10px; box-shadow: 0 1px 3px rgba(0,46,93,.12); }
+.msg-escribir textarea { flex: 1; border: 0; resize: none; font: 400 16px/22px 'Open Sans', var(--font); outline: none; background: transparent; }
+.msg-escribir .btn { width: auto; padding: 0 18px; min-height: 44px; }
+.aviso-error { background: #FBEAE8; color: #D92D20; border-radius: 10px; padding: 8px 12px; font-size: 13px; }
