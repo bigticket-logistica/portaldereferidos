@@ -21,6 +21,13 @@ export default function App() {
   if (invitacion) return <Invitacion codigo={invitacion[1].toUpperCase()} />
   const canal = ruta.match(/^\/c\/([A-Za-z0-9_-]+)/)
   if (canal) return <Invitacion codigo={canal[1].toLowerCase()} canal />
+  // /a/comercio → link de anfitrión (supervisor o comercio aliado): lleva a la
+  // inscripción de REFERIDORES y deja guardado quién invitó.
+  const anfitrion = ruta.match(/^\/a\/([A-Za-z0-9_-]+)/)
+  if (anfitrion) {
+    try { localStorage.setItem('ref_anfitrion', anfitrion[1].toUpperCase()) } catch { /* sin almacenamiento */ }
+    window.history.replaceState(null, '', '/?a=' + anfitrion[1].toUpperCase() + window.location.search.replace(/^\?/, '&'))
+  }
   return <ZonaReferidor />
 }
 

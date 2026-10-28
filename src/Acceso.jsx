@@ -72,12 +72,13 @@ function Ingresar({ onOlvide, onInscribirme }) {
 // "¿Por dónde te enteraste…?" (se guarda en ref_referidores.como_nos_conocio)
 const FUENTES = [['facebook', 'Facebook'], ['whatsapp', 'WhatsApp'], ['amigo', 'Un amigo'], ['supervisor', 'Supervisor BigTicket'], ['otro', 'Otro']]
 
-// Anfitrión: supervisor de Bigticket que comparte su link (referidos.fleetbiggy.com/?a=A0005).
-// No es referidor ni cobra bonos; solo queda registrado quién invitó al referidor.
+// Anfitrión: quien invita a ser referidor, sin ser referidor ni cobrar bonos.
+// Supervisores (?a=A0005) o comercios aliados (/a/comercio). Solo queda
+// registrado quién invitó al referidor.
 function leerAnfitrion() {
   try {
     const a = new URLSearchParams(window.location.search).get('a')
-    if (a && /^A\d{4}$/i.test(a)) { localStorage.setItem('ref_anfitrion', a.toUpperCase()); return a.toUpperCase() }
+    if (a && /^[A-Z0-9_-]{3,20}$/i.test(a)) { localStorage.setItem('ref_anfitrion', a.toUpperCase()); return a.toUpperCase() }
     return localStorage.getItem('ref_anfitrion') || null
   } catch { return null }
 }
@@ -85,7 +86,7 @@ function leerAnfitrion() {
 function Registro({ onYaTengo }) {
   const [anfitrion] = useState(leerAnfitrion)
   const [anfNombre, setAnfNombre] = useState('')
-  const [d, setD] = useState({ nombre: '', curp: '', correo: '', telefono: '', clave: '', clave2: '', fuentes: anfitrion ? ['supervisor'] : [], fuenteOtro: '' })
+  const [d, setD] = useState({ nombre: '', curp: '', correo: '', telefono: '', clave: '', clave2: '', fuentes: anfitrion && /^A\d{4}$/.test(anfitrion) ? ['supervisor'] : [], fuenteOtro: '' })
   useEffect(() => {
     if (anfitrion) supabase.rpc('fn_ref_anfitrion', { p_codigo: anfitrion }).then(({ data }) => setAnfNombre(data || ''))
   }, [anfitrion])
@@ -151,7 +152,7 @@ function Registro({ onYaTengo }) {
   return (
     <form onSubmit={irReglas} className="form" noValidate>
       <h2 className="form-t">Inscríbete y recibe tu QR</h2>
-      {anfNombre && <div className="anf-invita">👋 Te invitó <b>{anfNombre}</b>, de BigTicket</div>}
+      {anfNombre && <div className="anf-invita">👋 Te invitó <b>{anfNombre}</b>{/^A\d{4}$/.test(anfitrion || '') ? ', de BigTicket' : ''}</div>}
       <button type="button" className="aviso-cuenta-bt" onClick={onYaTengo}>
         <b>¿Ya tienes cuenta en el Portal del Transportista?</b> No te inscribas de nuevo: entra con el mismo correo y la misma contraseña. ›
       </button>
