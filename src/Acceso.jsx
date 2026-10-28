@@ -86,7 +86,9 @@ function leerAnfitrion() {
 function Registro({ onYaTengo }) {
   const [anfitrion] = useState(leerAnfitrion)
   const [anfNombre, setAnfNombre] = useState('')
-  const [d, setD] = useState({ nombre: '', curp: '', correo: '', telefono: '', clave: '', clave2: '', fuentes: anfitrion && /^A\d{4}$/.test(anfitrion) ? ['supervisor'] : [], fuenteOtro: '' })
+  const [d, setD] = useState({ nombre: '', curp: '', correo: '', telefono: '', clave: '', clave2: '', fuentes: !anfitrion ? [] : /^A\d{4}$/.test(anfitrion) ? ['supervisor'] : ['otro'],
+    fuenteOtro: anfitrion && !/^A\d{4}$/.test(anfitrion) ? 'Comercio' : '' })
+  // Link de supervisor → "Supervisor BigTicket" marcado; link de comercio aliado → "Otro: Comercio".
   useEffect(() => {
     if (anfitrion) supabase.rpc('fn_ref_anfitrion', { p_codigo: anfitrion }).then(({ data }) => setAnfNombre(data || ''))
   }, [anfitrion])
