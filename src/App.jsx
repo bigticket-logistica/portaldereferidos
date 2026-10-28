@@ -25,7 +25,6 @@ export default function App() {
   // inscripción de REFERIDORES y deja guardado quién invitó.
   const anfitrion = ruta.match(/^\/a\/([A-Za-z0-9_-]+)/)
   if (anfitrion) {
-    try { localStorage.setItem('ref_anfitrion', anfitrion[1].toUpperCase()) } catch { /* sin almacenamiento */ }
     window.history.replaceState(null, '', '/?a=' + anfitrion[1].toUpperCase() + window.location.search.replace(/^\?/, '&'))
   }
   return <ZonaReferidor />

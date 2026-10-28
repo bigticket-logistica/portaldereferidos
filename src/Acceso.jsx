@@ -75,12 +75,12 @@ const FUENTES = [['facebook', 'Facebook'], ['whatsapp', 'WhatsApp'], ['amigo', '
 // Anfitrión: quien invita a ser referidor, sin ser referidor ni cobrar bonos.
 // Supervisores (?a=A0005) o comercios aliados (/a/comercio). Solo queda
 // registrado quién invitó al referidor.
+// El anfitrión sale solo del link que se abre: /?a=A0005 (supervisor) o
+// /a/comercio. El link normal no muestra anfitrión. No se guarda nada.
 function leerAnfitrion() {
-  try {
-    const a = new URLSearchParams(window.location.search).get('a')
-    if (a && /^[A-Z0-9_-]{3,20}$/i.test(a)) { localStorage.setItem('ref_anfitrion', a.toUpperCase()); return a.toUpperCase() }
-    return localStorage.getItem('ref_anfitrion') || null
-  } catch { return null }
+  try { localStorage.removeItem('ref_anfitrion') } catch { /* sin almacenamiento */ }   // limpia lo de versiones anteriores
+  const a = new URLSearchParams(window.location.search).get('a')
+  return a && /^[A-Z0-9_-]{3,20}$/i.test(a) ? a.toUpperCase() : null
 }
 
 function Registro({ onYaTengo }) {
