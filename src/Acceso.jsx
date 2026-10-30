@@ -75,6 +75,17 @@ const FUENTES = [['facebook', 'Facebook'], ['whatsapp', 'WhatsApp'], ['amigo', '
 // Anfitrión: quien invita a ser referidor, sin ser referidor ni cobrar bonos.
 // Supervisores (?a=A0005) o comercios aliados (/a/comercio). Solo queda
 // registrado quién invitó al referidor.
+// "¿Por dónde te enteraste?" ya marcado según el link del anfitrión:
+// supervisor (A0005) → Supervisor BigTicket · FACEBOOK → Facebook ·
+// COMERCIO y otros aliados → Otro, con el nombre escrito.
+function fuentePorAnfitrion(a) {
+  if (!a) return { fuentes: [], fuenteOtro: '' }
+  if (/^A\d{4}$/.test(a)) return { fuentes: ['supervisor'], fuenteOtro: '' }
+  if (a === 'FACEBOOK') return { fuentes: ['facebook'], fuenteOtro: '' }
+  if (a === 'WHATSAPP') return { fuentes: ['whatsapp'], fuenteOtro: '' }
+  return { fuentes: ['otro'], fuenteOtro: a === 'COMERCIO' ? 'Comercio' : a.charAt(0) + a.slice(1).toLowerCase() }
+}
+
 // El anfitrión sale solo del link que se abre: /?a=A0005 (supervisor) o
 // /a/comercio. El link normal no muestra anfitrión. No se guarda nada.
 function leerAnfitrion() {
@@ -86,9 +97,7 @@ function leerAnfitrion() {
 function Registro({ onYaTengo }) {
   const [anfitrion] = useState(leerAnfitrion)
   const [anfNombre, setAnfNombre] = useState('')
-  const [d, setD] = useState({ nombre: '', curp: '', correo: '', telefono: '', clave: '', clave2: '', fuentes: !anfitrion ? [] : /^A\d{4}$/.test(anfitrion) ? ['supervisor'] : ['otro'],
-    fuenteOtro: anfitrion && !/^A\d{4}$/.test(anfitrion) ? 'Comercio' : '' })
-  // Link de supervisor → "Supervisor BigTicket" marcado; link de comercio aliado → "Otro: Comercio".
+  const [d, setD] = useState({ nombre: '', curp: '', correo: '', telefono: '', clave: '', clave2: '', ...fuentePorAnfitrion(anfitrion) })
   useEffect(() => {
     if (anfitrion) supabase.rpc('fn_ref_anfitrion', { p_codigo: anfitrion }).then(({ data }) => setAnfNombre(data || ''))
   }, [anfitrion])
